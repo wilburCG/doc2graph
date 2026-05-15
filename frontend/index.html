@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doc2Graph — 文档知识图谱</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .header .version { font-size: 0.8rem; opacity: 0.8; }
+        .health-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; display: inline-block; }
+        .health-dot.ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
+        .health-dot.err { background: var(--danger); }
+
+        /* Layout */
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        .grid { display: grid; gap: 1.5rem; }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+        .grid-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+        /* Cards */
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+        }
+        .card h2 { font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+
+        /* Stats */
+        .stat { text-align: center; padding: 1rem; }
+        .stat .number { font-size: 2rem; font-weight: 700; color: var(--primary); }
+        .stat .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+        /* Upload */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 2.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .upload-zone:hover, .upload-zone.drag {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.04);
+        }
+        .upload-zone .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .upload-zone p { color: var(--text-muted); }
+        .upload-zone .formats { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
+        #file-input { display: none; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+        /* Tables */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+        th { color: var(--text-muted); font-weight: 500; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:hover td { background: rgba(99, 102, 241, 0.03); }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .tag-person { background: #dbeafe; color: #1d4ed8; }
+        .tag-company { background: #dcfce7; color: #15803d; }
+        .tag-technology { background: #fef3c7; color: #b45309; }
+        .tag-concept { background: #f3e8ff; color: #7c3aed; }
+        .tag-product { background: #fce7f3; color: #be185d; }
+        .tag-other { background: #f1f5f9; color: #475569; }
+
+        /* Query */
+        .query-box { width: 100%; min-height: 80px; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; resize: vertical; }
+        .query-box:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+
+        /* Loading */
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Toast */
+        .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1000; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast {
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .toast-success { background: var(--success); }
+        .toast-error { background: var(--danger); }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Tabs */
+        .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 1rem; }
+        .tab { padding: 0.75rem 1.25rem; cursor: pointer; font-weight: 500; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .container { padding: 1rem; }
+            .header { padding: 1rem; }
+            .header h1 { font-size: 1.2rem; }
+            .grid-3 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🕸️ Doc2Graph <span class="version">v0.1.0</span></h1>
+    <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+        <span class="health-dot" id="health-dot"></span>
+        <span id="health-text">Connecting...</span>
+    </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<div class="container">
+    <!-- Stats Row -->
+    <div class="grid grid-3" style="margin-bottom: 1.5rem;">
+        <div class="card stat">
+            <div class="number" id="stat-nodes">-</div>
+            <div class="label">图谱节点</div>
+        </div>
+        <div class="card stat">
+            <div class="number" id="stat-rels">-</div>
+            <div class="label">关系边</div>
+        </div>
+        <div class="card stat">
+            <div class="number" id="stat-docs">-</div>
+            <div class="label">已处理文档</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" data-tab="upload">📄 上传文档</div>
+        <div class="tab" data-tab="entities">🏷️ 实体列表</div>
+        <div class="tab" data-tab="relations">🔗 关系列表</div>
+        <div class="tab" data-tab="query">🔍 查询</div>
+    </div>
+
+    <!-- Tab: Upload -->
+    <div class="tab-content active" id="tab-upload">
+        <div class="grid grid-2">
+            <div class="card">
+                <h2>📤 上传并处理文档</h2>
+                <div class="upload-zone" id="upload-zone">
+                    <div class="icon">📁</div>
+                    <p>点击或拖拽文件到此处</p>
+                    <div class="formats">支持 PDF, Markdown, TXT, DOCX</div>
+                </div>
+                <input type="file" id="file-input" accept=".pdf,.md,.markdown,.txt,.docx">
+                <div id="upload-status" style="margin-top: 1rem;"></div>
+            </div>
+            <div class="card">
+                <h2>⚙️ 图谱操作</h2>
+                <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="mergeGraph()">🔗 合并图谱</button>
+                    <button class="btn btn-outline" onclick="exportGraph('json')">📦 导出 JSON</button>
+                    <button class="btn btn-outline" onclick="exportGraph('cypher')">📦 导出 Cypher</button>
+                    <button class="btn btn-outline" onclick="refreshStats()">🔄 刷新统计</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Entities -->
+    <div class="tab-content" id="tab-entities">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin: 0;">🏷️ 实体列表</h2>
+                <button class="btn btn-outline" onclick="loadEntities()">🔄 刷新</button>
+            </div>
+            <div class="table-wrap" id="entities-table">
+                <p style="color: var(--text-muted); padding: 1rem;">加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Relations -->
+    <div class="tab-content" id="tab-relations">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin: 0;">🔗 关系列表</h2>
+                <button class="btn btn-outline" onclick="loadRelations()">🔄 刷新</button>
+            </div>
+            <div class="table-wrap" id="relations-table">
+                <p style="color: var(--text-muted); padding: 1rem;">加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Query -->
+    <div class="tab-content" id="tab-query">
+        <div class="card">
+            <h2>🔍 Cypher 查询</h2>
+            <div style="margin-top: 1rem;">
+                <textarea class="query-box" id="cypher-input" placeholder="输入 Cypher 查询语句...&#10;&#10;例如: MATCH (n) RETURN n.name, n.type LIMIT 20"></textarea>
+                <div class="btn-group" style="margin-top: 0.75rem;">
+                    <button class="btn btn-primary" onclick="runQuery()">▶️ 执行查询</button>
+                    <button class="btn btn-outline" onclick="setQuery('MATCH (n) RETURN n.name, n.type, n.source_doc LIMIT 20')">📋 查全部</button>
+                    <button class="btn btn-outline" onclick="setQuery('MATCH (a)-[r]->(b) RETURN a.name, type(r), b.name LIMIT 20')">🔗 查关系</button>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem;" id="query-results"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // API base URL
+    const API = window.location.origin;
+
+    // Toast notifications
+    function toast(msg, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = `toast toast-${type}`;
+        t.textContent = msg;
+        container.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    }
+
+    // Health check
+    async function checkHealth() {
+        const dot = document.getElementById('health-dot');
+        const text = document.getElementById('health-text');
+        try {
+            const res = await fetch(`${API}/api/health`);
+            const data = await res.json();
+            dot.className = 'health-dot ok';
+            text.textContent = '已连接';
+            if (data.graph) {
+                document.getElementById('stat-nodes').textContent = data.graph.nodes;
+                document.getElementById('stat-rels').textContent = data.graph.relationships;
+            }
+        } catch {
+            dot.className = 'health-dot err';
+            text.textContent = '未连接';
+        }
+    }
+
+    // Refresh stats
+    async function refreshStats() {
+        try {
+            const res = await fetch(`${API}/api/stats`);
+            const data = await res.json();
+            document.getElementById('stat-nodes').textContent = data.nodes;
+            document.getElementById('stat-rels').textContent = data.relationships;
+            // Count unique source docs from entities
+            const entities = await fetch(`${API}/api/entities?limit=1000`).then(r => r.json());
+            const docs = new Set(entities.map(e => e.source).filter(Boolean));
+            document.getElementById('stat-docs').textContent = docs.size;
+        } catch (e) {
+            toast('获取统计失败', 'error');
+        }
+    }
+
+    // Load entities
+    async function loadEntities() {
+        try {
+            const res = await fetch(`${API}/api/entities`);
+            const data = await res.json();
+            if (!data.length) {
+                document.getElementById('entities-table').innerHTML = '<p style="color: var(--text-muted); padding: 1rem;">暂无实体数据</p>';
+                return;
+            }
+            let html = '<table><thead><tr><th>名称</th><th>类型</th><th>来源文档</th></tr></thead><tbody>';
+            data.forEach(e => {
+                const tagClass = getTagClass(e.type);
+                html += `<tr>
+                    <td><strong>${escapeHtml(e.name)}</strong></td>
+                    <td><span class="tag ${tagClass}">${escapeHtml(e.type)}</span></td>
+                    <td style="color: var(--text-muted); font-size: 0.85rem;">${escapeHtml(e.source || '-')}</td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('entities-table').innerHTML = html;
+        } catch {
+            document.getElementById('entities-table').innerHTML = '<p style="color: var(--danger); padding: 1rem;">加载失败</p>';
+        }
+    }
+
+    // Load relations
+    async function loadRelations() {
+        try {
+            const res = await fetch(`${API}/api/relations`);
+            const data = await res.json();
+            if (!data.length) {
+                document.getElementById('relations-table').innerHTML = '<p style="color: var(--text-muted); padding: 1rem;">暂无关系数据</p>';
+                return;
+            }
+            let html = '<table><thead><tr><th>源实体</th><th>关系</th><th>目标实体</th></tr></thead><tbody>';
+            data.forEach(r => {
+                html += `<tr>
+                    <td><strong>${escapeHtml(r.source)}</strong></td>
+                    <td><span class="tag tag-technology">${escapeHtml(r.type)}</span></td>
+                    <td><strong>${escapeHtml(r.target)}</strong></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('relations-table').innerHTML = html;
+        } catch {
+            document.getElementById('relations-table').innerHTML = '<p style="color: var(--danger); padding: 1rem;">加载失败</p>';
+        }
+    }
+
+    // Tag class mapping
+    function getTagClass(type) {
+        const map = {
+            'Person': 'tag-person',
+            'Company': 'tag-company',
+            'Organization': 'tag-company',
+            'Technology': 'tag-technology',
+            'Product': 'tag-product',
+            'Concept': 'tag-concept',
+        };
+        return map[type] || 'tag-other';
+    }
+
+    // Escape HTML
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str || '';
+        return div.innerHTML;
+    }
+
+    // Upload handling
+    const uploadZone = document.getElementById('upload-zone');
+    const fileInput = document.getElementById('file-input');
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+    uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.classList.remove('drag');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+    async function handleFile(file) {
+        const status = document.getElementById('upload-status');
+        status.innerHTML = `<p style="color: var(--text-muted);">📄 处理中: <strong>${escapeHtml(file.name)}</strong> <span class="spinner"></span></p>`;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch(`${API}/api/process`, { method: 'POST', body: formData });
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.detail || '处理失败');
+            }
+
+            status.innerHTML = `
+                <div style="padding: 1rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+                    <p style="color: var(--success); font-weight: 500;">✅ 处理完成!</p>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">
+                        实体: ${data.entities} | 关系: ${data.relations} | 文档: ${data.source_doc}
+                    </p>
+                </div>`;
+            toast('文档处理成功!');
+            refreshStats();
+        } catch (e) {
+            status.innerHTML = `<p style="color: var(--danger);">❌ 处理失败: ${escapeHtml(e.message)}</p>`;
+            toast(e.message, 'error');
+        }
+    }
+
+    // Merge graph
+    async function mergeGraph() {
+        const btn = event.target;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> 合并中...';
+        try {
+            const res = await fetch(`${API}/api/merge`, { method: 'POST' });
+            const data = await res.json();
+            toast('图谱合并完成!');
+            refreshStats();
+        } catch {
+            toast('合并失败', 'error');
+        }
+        btn.disabled = false;
+        btn.innerHTML = '🔗 合并图谱';
+    }
+
+    // Export
+    async function exportGraph(fmt) {
+        try {
+            const res = await fetch(`${API}/api/export?fmt=${fmt}`);
+            const data = await res.json();
+            const content = fmt === 'json' ? JSON.stringify(data, null, 2) : data.cypher;
+            const ext = fmt === 'json' ? 'json' : 'cypher';
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `doc2graph_export.${ext}`;
+            a.click();
+            URL.revokeObjectURL(url);
+            toast(`已导出 ${ext} 文件`);
+        } catch {
+            toast('导出失败', 'error');
+        }
+    }
+
+    // Query
+    function setQuery(cypher) {
+        document.getElementById('cypher-input').value = cypher;
+    }
+
+    async function runQuery() {
+        const cypher = document.getElementById('cypher-input').value.trim();
+        if (!cypher) { toast('请输入查询语句', 'error'); return; }
+
+        const resultsDiv = document.getElementById('query-results');
+        resultsDiv.innerHTML = '<p style="color: var(--text-muted);">执行中...</p>';
+
+        try {
+            const res = await fetch(`${API}/api/query`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cypher }),
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.detail || '查询失败');
+            }
+
+            if (!data.results.length) {
+                resultsDiv.innerHTML = '<p style="color: var(--text-muted);">无结果</p>';
+                return;
+            }
+
+            const keys = Object.keys(data.results[0]);
+            let html = `<p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">返回 ${data.count} 条结果</p>`;
+            html += '<div class="table-wrap"><table><thead><tr>';
+            keys.forEach(k => html += `<th>${escapeHtml(k)}</th>`);
+            html += '</tr></thead><tbody>';
+            data.results.forEach(row => {
+                html += '<tr>';
+                keys.forEach(k => html += `<td>${escapeHtml(String(row[k] ?? ''))}</td>`);
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            resultsDiv.innerHTML = html;
+        } catch (e) {
+            resultsDiv.innerHTML = `<p style="color: var(--danger);">❌ ${escapeHtml(e.message)}</p>`;
+        }
+    }
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.dataset.tab;
+            document.getElementById(`tab-${target}`).classList.add('active');
+
+            // Load data on tab switch
+            if (target === 'entities') loadEntities();
+            if (target === 'relations') loadRelations();
+        });
+    });
+
+    // Init
+    checkHealth();
+    refreshStats();
+</script>
+
+</body>
+</html>

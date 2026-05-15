@@ -290,5 +290,27 @@ def stats(
         neo4j.close()
 
 
+@app.command()
+def serve(
+    host: str = typer.Option("0.0.0.0", "--host", help="Host to bind"),
+    port: int = typer.Option(8000, "--port", "-p", help="Port to bind"),
+    reload: bool = typer.Option(False, "--reload", help="Auto-reload on changes"),
+) -> None:
+    """Start the API server with web frontend."""
+    import uvicorn
+
+    console.print(f"\n[bold]Starting Doc2Graph API server...[/bold]")
+    console.print(f"  URL:  http://{host}:{port}")
+    console.print(f"  API:  http://{host}:{port}/docs")
+    console.print()
+
+    uvicorn.run(
+        "doc2graph.api:app",
+        host=host,
+        port=port,
+        reload=reload,
+    )
+
+
 if __name__ == "__main__":
     app()
