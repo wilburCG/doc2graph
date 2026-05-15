@@ -92,6 +92,9 @@ def init(
 @app.command()
 def process(
     path: str = typer.Argument(..., help="Path to a document file or directory"),
+    pages: str = typer.Option(None, "--pages", "-p", help="PDF page range (e.g. '1,3,5-10', '1', 'all')"),
+    ocr: bool = typer.Option(True, "--ocr/--no-ocr", help="Enable OCR for PDF images"),
+    ocr_lang: str = typer.Option("chi_sim+eng", "--ocr-lang", help="OCR language (e.g. chi_sim+eng)"),
     recursive: bool = typer.Option(False, "--recursive", "-r", help="Process directories recursively"),
     config: str | None = typer.Option(None, "--config", "-c", help="Path to config file"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose logging"),
@@ -157,7 +160,12 @@ def process(
                 if not parser:
                     progress.update(task, description="[red]Unsupported format[/red]")
                     continue
-                text = parser.parse(file_path)
+
+                # Pass page and OCR options for PDF parser
+                if isinstance(parser, PdfParser):
+                    text = parser.parse(file_path, pages=pages, ocr_enabled=ocr, ocr_lang=ocr_lang)
+                else:
+                    text = parser.parse(file_path)
                 progress.update(task, description="[green]✓ Parsed[/green]")
 
                 # Extract

@@ -170,8 +170,21 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 # ---------------------------------------------------------------------------
 
 @app.post("/api/process", response_model=ProcessResponse)
-async def process_document(file: UploadFile = File(...)):
-    """Upload and process a single document."""
+async def process_document(
+    file: UploadFile = File(...),
+    pages: str | None = None,
+    ocr: bool = True,
+    ocr_lang: str = "chi_sim+eng",
+):
+    """Upload and process a single document.
+
+    Args:
+        file: The document file (PDF, MD, TXT, DOCX).
+        pages: Page range for PDF files (e.g. "1,3,5-10", "1", "all").
+               1-based page numbers. Default is all pages.
+        ocr: Enable OCR for PDF images. Default is True.
+        ocr_lang: Tesseract OCR language (e.g. "chi_sim+eng"). Default is Chinese + English.
+    """
     if config is None or not config.llm.api_key:
         raise HTTPException(status_code=500, detail="LLM API key not configured")
 
@@ -188,7 +201,12 @@ async def process_document(file: UploadFile = File(...)):
         parser = _get_parser(file_path)
         if not parser:
             raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.filename}")
-        text = parser.parse(file_path)
+
+        # Pass page and OCR options for PDF parser
+        if isinstance(parser, PdfParser):
+            text = parser.parse(file_path, pages=pages, ocr_enabled=ocr, ocr_lang=ocr_lang)
+        else:
+            text = parser.parse(file_path)
 
         # Extract
         doc = Document.from_path(file_path)
@@ -324,3 +342,27 @@ async def health_check():
         return {"status": "healthy", "graph": stats}
     except Exception as e:
         return {"status": "degraded", "error": str(e)}
+
+
+@app.post("/api/pdf-info")
+async def pdf_info(file: UploadFile = File(...)):
+    """Get PDF file information (page count, etc.) without full processing."""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files supported")
+
+    upload_dir = Path("/tmp/doc2graph_uploads")
+    upload_dir.mkdir(exist_ok=True)
+    file_path = upload_dir / file.filename
+
+    content = await file.read()
+    file_path.write_bytes(content)
+
+    try:
+        parser = PdfParser()
+        page_count = parser.get_page_count(file_path)
+        return {"filename": file.filename, "pages": page_count, "type": "pdf"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if file_path.exists():
+            file_path.unlink()
