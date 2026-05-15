@@ -227,6 +227,18 @@
                 </div>
 
                 <div id="upload-status" style="margin-top: 1rem;"></div>
+
+                <!-- Submit button (hidden by default, shown when file selected) -->
+                <div id="submit-section" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+                    <div style="margin-bottom: 0.75rem;">
+                        <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">🏷️ 来源文档名 (source_doc)</label>
+                        <input type="text" id="source-doc" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem;">
+                        <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">默认是文件名，可自定义修改</div>
+                    </div>
+                    <button class="btn btn-success" onclick="processSelectedFile()" id="submit-btn" style="width: 100%; justify-content: center; font-size: 1rem; padding: 0.75rem;">
+                        🚀 开始处理
+                    </button>
+                </div>
             </div>
             <div class="card">
                 <h2>⚙️ 图谱操作</h2>
@@ -408,6 +420,10 @@
     const pdfInfo = document.getElementById('pdf-info');
     const pageRangeInput = document.getElementById('page-range');
     const ocrCheckbox = document.getElementById('ocr-enabled');
+    const submitSection = document.getElementById('submit-section');
+    const sourceDocInput = document.getElementById('source-doc');
+    const submitBtn = document.getElementById('submit-btn');
+    let selectedFile = null;
 
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag'); });
@@ -415,19 +431,27 @@
     uploadZone.addEventListener('drop', (e) => {
         e.preventDefault();
         uploadZone.classList.remove('drag');
-        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]);
     });
     fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFileSelect(fileInput.files[0]); });
 
-    // When a file is selected, check if it's a PDF and show options
+    // When a file is selected, show options and submit button
     async function handleFileSelect(file) {
+        selectedFile = file;
         const isPdf = file.name.toLowerCase().endsWith('.pdf');
 
+        // Set default source_doc to filename (without extension)
+        const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
+        sourceDocInput.value = nameWithoutExt;
+
         if (isPdf) {
-            // Show PDF options panel
+            // Show PDF options panel and submit button
             pdfOptions.style.display = 'block';
+            submitSection.style.display = 'block';
             pdfInfo.textContent = '正在获取页数...';
             pageRangeInput.value = '';
+            submitBtn.innerHTML = '🚀 开始处理';
+            submitBtn.disabled = false;
 
             // Get PDF page count
             try {
@@ -443,30 +467,40 @@
                 pdfInfo.textContent = file.name;
             }
         } else {
-            // Hide PDF options for non-PDF files
+            // Hide PDF options but show submit button for non-PDF files
             pdfOptions.style.display = 'none';
-            // Process immediately for non-PDF files
-            processFile(file);
+            submitSection.style.display = 'block';
+            submitBtn.innerHTML = '🚀 开始处理';
+            submitBtn.disabled = false;
         }
     }
 
-    // Process the file (called after options are set or immediately for non-PDF)
-    async function processFile(file) {
-        const status = document.getElementById('upload-status');
-        const isPdf = file.name.toLowerCase().endsWith('.pdf');
+    // Process the selected file when submit button is clicked
+    async function processSelectedFile() {
+        if (!selectedFile) {
+            toast('请先选择文件', 'error');
+            return;
+        }
 
-        // Show page info in status if PDF
+        const isPdf = selectedFile.name.toLowerCase().endsWith('.pdf');
+        const status = document.getElementById('upload-status');
+
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> 处理中...';
+
+        // Build status message
         let pageInfo = '';
         if (isPdf) {
             const pages = pageRangeInput.value.trim();
             const ocr = ocrCheckbox.checked;
             pageInfo = ` | 页码: ${pages || '全部'} | OCR: ${ocr ? '开' : '关'}`;
         }
-
-        status.innerHTML = `<p style="color: var(--text-muted);">📄 处理中: <strong>${escapeHtml(file.name)}</strong>${pageInfo} <span class="spinner"></span></p>`;
+        status.innerHTML = `<p style="color: var(--text-muted);">📄 处理中: <strong>${escapeHtml(selectedFile.name)}</strong>${pageInfo} <span class="spinner"></span></p>`;
 
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', selectedFile);
+        formData.append('source_doc', sourceDocInput.value.trim() || selectedFile.name.replace(/\.[^.]+$/, ''));
 
         // Add PDF-specific parameters
         if (isPdf) {
@@ -487,29 +521,32 @@
                 <div style="padding: 1rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
                     <p style="color: var(--success); font-weight: 500;">✅ 处理完成!</p>
                     <p style="color: var(--text-muted); font-size: 0.9rem;">
-                        实体: ${data.entities} | 关系: ${data.relations} | 文档: ${data.source_doc}
+                        实体: ${data.entities} | 关系: ${data.relations} | 来源: ${data.source_doc}
                     </p>
                 </div>`;
             toast('文档处理成功!');
             refreshStats();
 
-            // Reset PDF options
+            // Reset UI
             pdfOptions.style.display = 'none';
+            submitSection.style.display = 'none';
             pageRangeInput.value = '';
+            selectedFile = null;
+            fileInput.value = '';
+            submitBtn.innerHTML = '🚀 开始处理';
+            submitBtn.disabled = false;
         } catch (e) {
             status.innerHTML = `<p style="color: var(--danger);">❌ 处理失败: ${escapeHtml(e.message)}</p>`;
             toast(e.message, 'error');
+            // Re-enable button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '🚀 开始处理';
         }
     }
 
-    // Handle the original handleFile for drag-drop (PDF files need options first)
+    // Handle the original handleFile for drag-drop
     async function handleFile(file) {
-        const isPdf = file.name.toLowerCase().endsWith('.pdf');
-        if (isPdf) {
-            handleFileSelect(file);
-        } else {
-            processFile(file);
-        }
+        handleFileSelect(file);
     }
 
     // Merge graph

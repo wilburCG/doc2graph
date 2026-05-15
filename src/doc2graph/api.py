@@ -175,6 +175,7 @@ async def process_document(
     pages: str | None = None,
     ocr: bool = True,
     ocr_lang: str = "chi_sim+eng",
+    source_doc: str | None = None,
 ):
     """Upload and process a single document.
 
@@ -184,6 +185,7 @@ async def process_document(
                1-based page numbers. Default is all pages.
         ocr: Enable OCR for PDF images. Default is True.
         ocr_lang: Tesseract OCR language (e.g. "chi_sim+eng"). Default is Chinese + English.
+        source_doc: Custom source document identifier. Defaults to filename without extension.
     """
     if config is None or not config.llm.api_key:
         raise HTTPException(status_code=500, detail="LLM API key not configured")
@@ -208,8 +210,10 @@ async def process_document(
         else:
             text = parser.parse(file_path)
 
-        # Extract
+        # Extract - use custom source_doc if provided, otherwise use filename
         doc = Document.from_path(file_path)
+        actual_source_doc = source_doc.strip() if source_doc else doc.source_doc_id
+
         extractor = LlmExtractor(
             api_key=config.llm.api_key,
             model=config.llm.model,
@@ -218,7 +222,7 @@ async def process_document(
             max_relations=config.extraction.max_relations,
             temperature=config.extraction.temperature,
         )
-        entities, relations = extractor.extract(text, source_doc=doc.source_doc_id)
+        entities, relations = extractor.extract(text, source_doc=actual_source_doc)
 
         # Import
         client = _get_client()
@@ -228,7 +232,7 @@ async def process_document(
         return ProcessResponse(
             entities=counts.get("entities", 0),
             relations=counts.get("relations", 0),
-            source_doc=doc.source_doc_id,
+            source_doc=actual_source_doc,
         )
     except Exception as e:
         logger.error(f"Error processing {file.filename}: {e}")
