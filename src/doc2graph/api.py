@@ -560,3 +560,412 @@ async def pdf_info(file: UploadFile = File(...)):
     finally:
         if file_path.exists():
             file_path.unlink()
+
+
+# ---------------------------------------------------------------------------
+# Graph RAG Integration Endpoints (for MaxKB)
+# ---------------------------------------------------------------------------
+
+class GraphSearchRequest(BaseModel):
+    """Request to search the knowledge graph."""
+    query: str = Field(..., description="Search query in natural language")
+    limit: int = Field(10, description="Maximum number of results")
+    min_score: float = Field(0.5, description="Minimum similarity score (0-1)")
+
+
+class GraphSearchResponse(BaseModel):
+    """Response from graph search."""
+    entities: list[dict] = Field(default_factory=list, description="Matched entities")
+    relations: list[dict] = Field(default_factory=list, description="Relevant relations")
+    context_text: str = Field("", description="Context text for RAG")
+    summary: str = Field("", description="Brief summary of the graph context")
+
+
+class GraphQaRequest(BaseModel):
+    """Request for graph-based question answering."""
+    question: str = Field(..., description="Question to answer")
+    use_llm: bool = Field(True, description="Use LLM to generate answer from context")
+
+
+class GraphQaResponse(BaseModel):
+    """Response from graph QA."""
+    question: str = Field("", description="Original question")
+    answer: str = Field("", description="Generated answer")
+    context: dict = Field(default_factory=dict, description="Graph context used")
+    sources: list[str] = Field(default_factory=list, description="Source documents")
+    confidence: float = Field(0.0, description="Confidence score (0-1)")
+
+
+class EntitySearchRequest(BaseModel):
+    """Request to search entities."""
+    name: str = Field("", description="Entity name to search (supports fuzzy matching)")
+    type: str = Field("", description="Entity type filter")
+    source_doc: str = Field("", description="Source document filter")
+    limit: int = Field(50, description="Maximum results")
+
+
+def _extract_keywords_chinese(q: str) -> str:
+    """Extract keywords from Chinese question."""
+    keywords = q
+    
+    # Remove question markers
+    keywords = keywords.rstrip("？?！!。,.， ")
+    keywords = keywords.rstrip("是什么").rstrip("是啥").rstrip("是谁")
+    
+    # Remove common question prefixes (longest first)
+    prefixes = [
+        "什么是", "什么叫", "啥是", "谁是",
+        "解释一下", "介绍一下", "说明一下",
+        "列出所有", "列出", "所有",
+        "请问", "我想知道", "想了解",
+        "哪些是", "哪些", "什么",
+    ]
+    
+    for p in sorted(prefixes, key=len, reverse=True):
+        if keywords.startswith(p):
+            keywords = keywords[len(p):]
+            break
+    
+    # Remove suffixes for relation questions
+    suffixes = ["的关系", "的联系", "的关联", "是什么", "是啥"]
+    for s in suffixes:
+        if keywords.endswith(s):
+            keywords = keywords[:-len(s)]
+    
+    # Remove relation middle words for entity extraction
+    relation_words = ["和", "与", "跟", "之间", "相关的", "有关的", "的"]
+    for w in relation_words:
+        keywords = keywords.replace(w, " ")
+    
+    # Clean up whitespace - return first meaningful keyword
+    parts = [p.strip() for p in keywords.split() if p.strip() and len(p.strip()) >= 2]
+    
+    if parts:
+        return parts[0]  # Return the first meaningful keyword
+    
+    # Fallback: use first 2-4 chars
+    return q[:4] if len(q) >= 4 else q.strip()
+
+
+def _generate_cypher_from_query(nl_query: str) -> str:
+    """Generate Cypher query from natural language (Chinese supported)."""
+    q = nl_query.lower().strip()
+    
+    # Extract main entity/keywords
+    entity_name = _extract_keywords_chinese(q)
+    
+    # Pattern: "X 和 Y 的关系" / "X与Y的关系"
+    if any(k in q for k in ["和", "与", "跟"]) and any(k in q for k in ["关系", "联系", "关联"]):
+        # Try to extract two entities
+        import re
+        # Split by common connectors
+        separators = ["和", "与", "跟", "之间的"]
+        parts = None
+        for sep in separators:
+            if sep in entity_name:
+                parts = entity_name.split(sep, 1)
+                break
+        if parts and len(parts) == 2:
+            a, b = parts[0].strip(), parts[1].strip()
+            if a and b:
+                return f"""
+                MATCH (a)-[r]-(b)
+                WHERE (toLower(a.name) CONTAINS '{a}' AND toLower(b.name) CONTAINS '{b}')
+                   OR (toLower(a.name) CONTAINS '{b}' AND toLower(b.name) CONTAINS '{a}')
+                RETURN a, type(r) AS relation, b
+                LIMIT 15
+                """
+    
+    # Pattern: "X 相关的" / "与 X 关联的"
+    if any(k in q for k in ["相关", "关联", "有关"]):
+        return f"""
+        MATCH (n)-[r]->(m)
+        WHERE toLower(n.name) CONTAINS '{entity_name}' OR toLower(m.name) CONTAINS '{entity_name}'
+        RETURN n, type(r) AS relation, m
+        LIMIT 20
+        """
+    
+    # Pattern: "列出所有 X" / "所有 X 实体" / "什么是 X" / "谁是 X"
+    if (any(k in q for k in ["列出", "所有", "什么是", "啥是", "谁是", "哪些"]) or
+        q.endswith(("是什么", "是啥", "是谁"))):
+        
+        # If contains "类型" or "种类" or "类", search by type
+        if any(k in q for k in ["类型", "种类", "类别的", "分类"]):
+            return f"""
+            MATCH (n)
+            WHERE toLower(n.type) CONTAINS '{entity_name}' OR toLower(n.name) CONTAINS '{entity_name}'
+            RETURN n.name AS name, n.type AS type, n.source_doc AS source
+            ORDER BY name
+            LIMIT 50
+            """
+        
+        # Default entity search with relations
+        return f"""
+        MATCH (n)
+        WHERE toLower(n.name) CONTAINS '{entity_name}'
+        OPTIONAL MATCH (n)-[r]->(m)
+        RETURN n AS entity, type(r) AS rel_type, m AS target
+        LIMIT 20
+        """
+    
+    # Default: fuzzy search for entities with relations
+    search_term = entity_name if len(entity_name) >= 2 else q[:4] if len(q) >= 4 else q
+    return f"""
+    MATCH (n)
+    WHERE toLower(n.name) CONTAINS '{search_term}'
+    OPTIONAL MATCH (n)-[r]->(m)
+    RETURN n AS entity, type(r) AS rel_type, m AS target
+    LIMIT 15
+    """
+
+
+def _format_graph_context(entities: list[dict], relations: list[dict]) -> str:
+    """Format graph results into context text for RAG."""
+    lines = []
+    lines.append("【知识图谱检索结果】")
+    lines.append("")
+    
+    if entities:
+        lines.append("实体信息：")
+        for e in entities[:10]:
+            name = e.get("name", "")
+            etype = e.get("type", "")
+            source = e.get("source", "") or e.get("source_doc", "")
+            if name:
+                source_info = f" (来源: {source})" if source else ""
+                lines.append(f"  - {name} [{etype}]{source_info}")
+        lines.append("")
+    
+    if relations:
+        lines.append("关系信息：")
+        for r in relations[:15]:
+            src = r.get("source", "") or r.get("from", "")
+            rel = r.get("type", "") or r.get("relation", "")
+            tgt = r.get("target", "") or r.get("to", "")
+            if src and rel and tgt:
+                lines.append(f"  - {src} → [{rel}] → {tgt}")
+        lines.append("")
+    
+    lines.append("请基于以上知识图谱信息回答用户问题。")
+    return "\n".join(lines)
+
+
+@app.post("/api/graph/search", response_model=GraphSearchResponse)
+async def graph_search(req: GraphSearchRequest):
+    """Search the knowledge graph using natural language.
+    
+    This endpoint performs semantic search on the graph and returns
+    relevant entities and relations, formatted as RAG context.
+    
+    Args:
+        query: Natural language search query
+        limit: Maximum number of results
+        min_score: Minimum similarity threshold
+    
+    Returns:
+        GraphSearchResponse with entities, relations, and context text
+    """
+    try:
+        client = _get_client()
+        query = req.query.strip()
+        
+        # Generate and execute Cypher
+        cypher = _generate_cypher_from_query(query)
+        results = client.run_query(cypher)
+        
+        # Extract unique entities and relations
+        entities_dict = {}
+        relations_dict = {}
+        
+        for row in results:
+            # Handle entity search results
+            if "name" in row and "type" in row:
+                key = f"{row['name']}:{row['type']}"
+                if key not in entities_dict:
+                    entities_dict[key] = {
+                        "name": row.get("name", ""),
+                        "type": row.get("type", ""),
+                        "source": row.get("source", ""),
+                    }
+                continue
+            
+            # Handle entity-relation-entity results
+            entity = row.get("entity", {}) or row.get("a", {})
+            target = row.get("target", {}) or row.get("b", {})
+            rel_type = row.get("rel_type", "") or row.get("relation", "")
+            
+            if isinstance(entity, dict) and entity.get("name"):
+                key = f"{entity['name']}:{entity.get('type', '')}"
+                if key not in entities_dict:
+                    entities_dict[key] = {
+                        "name": entity.get("name", ""),
+                        "type": entity.get("type", ""),
+                        "source": entity.get("source_doc", ""),
+                    }
+            
+            if isinstance(target, dict) and target.get("name"):
+                key = f"{target['name']}:{target.get('type', '')}"
+                if key not in entities_dict:
+                    entities_dict[key] = {
+                        "name": target.get("name", ""),
+                        "type": target.get("type", ""),
+                        "source": target.get("source_doc", ""),
+                    }
+            
+            if rel_type and isinstance(entity, dict) and isinstance(target, dict):
+                src_name = entity.get("name", "")
+                tgt_name = target.get("name", "")
+                if src_name and tgt_name:
+                    rel_key = f"{src_name}:{rel_type}:{tgt_name}"
+                    if rel_key not in relations_dict:
+                        relations_dict[rel_key] = {
+                            "source": src_name,
+                            "type": rel_type,
+                            "target": tgt_name,
+                        }
+        
+        entities = list(entities_dict.values())[:req.limit]
+        relations = list(relations_dict.values())[:req.limit]
+        
+        # Build summary
+        summary = f"找到 {len(entities)} 个相关实体和 {len(relations)} 个相关关系"
+        if entities:
+            entity_names = [e["name"] for e in entities[:5]]
+            summary += f"，包括：{', '.join(entity_names)}"
+            if len(entities) > 5:
+                summary += f" 等"
+        
+        return GraphSearchResponse(
+            entities=entities,
+            relations=relations,
+            context_text=_format_graph_context(entities, relations),
+            summary=summary,
+        )
+    except Exception as e:
+        logger.error(f"Graph search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/graph/qa", response_model=GraphQaResponse)
+async def graph_qa(req: GraphQaRequest):
+    """Question answering using the knowledge graph.
+    
+    This endpoint searches the graph for relevant information and optionally
+    uses LLM to generate a natural language answer.
+    
+    Args:
+        question: The question to answer
+        use_llm: Whether to use LLM to generate the answer
+    
+    Returns:
+        GraphQaResponse with answer, context, and sources
+    """
+    try:
+        # First, search the graph
+        search_req = GraphSearchRequest(query=req.question, limit=15)
+        search_result = await graph_search(search_req)
+        
+        # Collect sources
+        sources_set = set()
+        for e in search_result.entities:
+            if e.get("source"):
+                sources_set.add(e["source"])
+        sources = list(sources_set)
+        
+        # Calculate confidence based on number of matches
+        confidence = min(1.0, (len(search_result.entities) * 0.1 + len(search_result.relations) * 0.05))
+        
+        # Generate answer
+        answer = ""
+        if req.use_llm and search_result.context_text:
+            try:
+                if config is None or not config.llm.api_key:
+                    answer = search_result.context_text
+                else:
+                    # Use LLM to generate answer from context
+                    from openai import OpenAI
+                    client = OpenAI(
+                        api_key=config.llm.api_key,
+                        base_url=config.llm.api_base,
+                    )
+                    prompt = f"""你是一个知识图谱问答助手。请基于以下知识图谱检索结果，用简洁的中文回答用户问题。
+
+{search_result.context_text}
+
+用户问题：{req.question}
+
+要求：
+1. 只基于提供的图谱信息回答，不要编造信息
+2. 如果信息不足，明确说明无法找到相关信息
+3. 回答要简洁明了
+"""
+                    response = client.chat.completions.create(
+                        model=config.llm.model,
+                        messages=[{"role": "user", "content": prompt}],
+                        temperature=0.1,
+                    )
+                    answer = response.choices[0].message.content or ""
+            except Exception as llm_err:
+                logger.warning(f"LLM answer generation failed: {llm_err}")
+                answer = search_result.context_text
+        else:
+            answer = search_result.context_text
+        
+        return GraphQaResponse(
+            question=req.question,
+            answer=answer,
+            context={
+                "entities": search_result.entities,
+                "relations": search_result.relations,
+                "summary": search_result.summary,
+            },
+            sources=sources,
+            confidence=confidence,
+        )
+    except Exception as e:
+        logger.error(f"Graph QA error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/graph/entities")
+async def search_entities(req: EntitySearchRequest):
+    """Search entities with filters.
+    
+    Args:
+        name: Entity name search (fuzzy match)
+        type: Entity type filter (exact match)
+        source_doc: Source document filter
+        limit: Maximum results
+    """
+    try:
+        client = _get_client()
+        
+        conditions = []
+        params = {}
+        
+        if req.name:
+            conditions.append("toLower(n.name) CONTAINS $name")
+            params["name"] = req.name.lower()
+        if req.type:
+            conditions.append("n.type = $type")
+            params["type"] = req.type
+        if req.source_doc:
+            conditions.append("n.source_doc = $source_doc")
+            params["source_doc"] = req.source_doc
+        
+        where_clause = "WHERE " + " AND ".join(conditions) if conditions else ""
+        
+        cypher = f"""
+        MATCH (n)
+        {where_clause}
+        RETURN n.name AS name, n.type AS type, n.source_doc AS source_doc
+        ORDER BY name
+        LIMIT $limit
+        """
+        params["limit"] = req.limit
+        
+        results = client.run_query(cypher, params)
+        return results
+    except Exception as e:
+        logger.error(f"Entity search error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
