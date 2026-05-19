@@ -3,17 +3,21 @@
 Provides REST API endpoints for document processing, graph queries, and export.
 
 Usage:
-    uvicorn doc2graph.api:app --host 0.0.0.0 --port 8000 --reload
+    uvicorn doc2graph.api:app --host 0.0.0.0 --port 8000
 """
 
 from __future__ import annotations
 
+import json
 import logging
+import threading
+import time
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -39,6 +43,56 @@ PARSERS = [PdfParser, MdParser, TxtParser, DocxParser]
 config: Config | None = None
 neo4j_client: Neo4jClient | None = None
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Progress Tracking (file-based, shared across workers)
+# ---------------------------------------------------------------------------
+
+_PROGRESS_DIR = Path("/tmp/doc2graph_tasks")
+_PROGRESS_DIR.mkdir(parents=True, exist_ok=True)
+_progress_lock = threading.Lock()
+
+
+def _task_file(task_id: str) -> Path:
+    return _PROGRESS_DIR / f"{task_id}.json"
+
+
+def _set_progress(task_id: str, **kwargs):
+    """Update progress for a task (file-based, works across workers)."""
+    with _progress_lock:
+        fpath = _task_file(task_id)
+        data = {}
+        if fpath.exists():
+            try:
+                data = json.loads(fpath.read_text())
+            except Exception:
+                pass
+        data.update(kwargs)
+        data["updated_at"] = time.time()
+        fpath.write_text(json.dumps(data))
+
+
+def _get_progress(task_id: str) -> dict | None:
+    fpath = _task_file(task_id)
+    if not fpath.exists():
+        return None
+    try:
+        return json.loads(fpath.read_text())
+    except Exception:
+        return None
+
+
+def _cleanup_old_tasks(max_age: float = 300):
+    """Remove task files older than max_age seconds."""
+    now = time.time()
+    with _progress_lock:
+        for fpath in _PROGRESS_DIR.glob("*.json"):
+            try:
+                data = json.loads(fpath.read_text())
+                if now - data.get("updated_at", 0) > max_age:
+                    fpath.unlink()
+            except Exception:
+                pass
 
 
 def _get_parser(file_path: Path):
@@ -166,18 +220,109 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
 # ---------------------------------------------------------------------------
+# Background Task Processing
+# ---------------------------------------------------------------------------
+
+def _process_document_task(
+    task_id: str,
+    file_path: Path,
+    filename: str,
+    pages: str | None,
+    ocr: bool,
+    ocr_lang: str,
+    source_doc: str,
+):
+    """Background thread that processes a document and reports progress."""
+    try:
+        _set_progress(task_id, status="processing", phase="parsing",
+                      message="正在解析文档...")
+
+        # Parse
+        parser = _get_parser(file_path)
+        if not parser:
+            _set_progress(task_id, status="error",
+                          error=f"Unsupported file type: {filename}")
+            return
+
+        # Pass progress callback for PDF parser
+        if isinstance(parser, PdfParser):
+            def pdf_progress(info: dict):
+                _set_progress(task_id, **info)
+
+            text = parser.parse(file_path, pages=pages, ocr_enabled=ocr,
+                                ocr_lang=ocr_lang, progress_callback=pdf_progress)
+        else:
+            text = parser.parse(file_path)
+
+        # Check if we have pages info for PDF
+        if isinstance(parser, PdfParser) and pages:
+            from doc2graph.parser.pdf_parser import parse_page_range
+            try:
+                total = parser.get_page_count(file_path)
+                selected = parse_page_range(pages, total)
+                _set_progress(task_id,
+                              page_current=len(selected),
+                              page_total=len(selected))
+            except Exception:
+                pass
+
+        _set_progress(task_id, phase="extracting",
+                      message="正在提取实体和关系...")
+
+        # Extract
+        doc = Document.from_path(file_path)
+        actual_source_doc = source_doc.strip() if source_doc else doc.source_doc_id
+
+        extractor = LlmExtractor(
+            api_key=config.llm.api_key,
+            model=config.llm.model,
+            api_base=config.llm.api_base,
+            max_entities=config.extraction.max_entities,
+            max_relations=config.extraction.max_relations,
+            temperature=config.extraction.temperature,
+        )
+        entities, relations = extractor.extract(text, source_doc=actual_source_doc)
+
+        _set_progress(task_id, phase="importing",
+                      message="正在导入到图谱...")
+
+        # Import
+        client = _get_client()
+        importer = GraphImporter(client)
+        counts = importer.import_graph(entities, relations)
+
+        _set_progress(task_id, status="done", phase="done",
+                      message="处理完成!",
+                      result={
+                          "entities": counts.get("entities", 0),
+                          "relations": counts.get("relations", 0),
+                          "source_doc": actual_source_doc,
+                      })
+
+    except Exception as e:
+        logger.error(f"Task {task_id} error: {e}")
+        _set_progress(task_id, status="error", error=str(e))
+    finally:
+        # Clean up uploaded file
+        if file_path.exists():
+            file_path.unlink()
+
+
+# ---------------------------------------------------------------------------
 # API Endpoints
 # ---------------------------------------------------------------------------
 
-@app.post("/api/process", response_model=ProcessResponse)
+@app.post("/api/process")
 async def process_document(
     file: UploadFile = File(...),
-    pages: str | None = None,
-    ocr: bool = True,
-    ocr_lang: str = "chi_sim+eng",
-    source_doc: str | None = None,
+    pages: str | None = Form(None),
+    ocr: str = Form("true"),
+    ocr_lang: str = Form("chi_sim+eng"),
+    source_doc: str | None = Form(None),
 ):
-    """Upload and process a single document.
+    """Upload and process a single document asynchronously.
+
+    Returns a task_id that can be used to poll progress via /api/progress/{task_id}.
 
     Args:
         file: The document file (PDF, MD, TXT, DOCX).
@@ -198,49 +343,94 @@ async def process_document(
     content = await file.read()
     file_path.write_bytes(content)
 
+    # Create task
+    task_id = str(uuid.uuid4())[:8]
+    actual_source_doc = source_doc.strip() if source_doc else file.filename.rsplit(".", 1)[0]
+    ocr_enabled = ocr.lower() in ("true", "1", "yes", "on")
+
+    _set_progress(task_id,
+                  status="pending",
+                  phase="upload",
+                  message="任务已创建，等待处理...",
+                  filename=file.filename,
+                  pages=pages or "all",
+                  ocr=ocr_enabled,
+                  page_current=0,
+                  page_total=None)
+
+    # Start background thread
+    thread = threading.Thread(
+        target=_process_document_task,
+        args=(task_id, file_path, file.filename, pages, ocr_enabled, ocr_lang, actual_source_doc),
+        daemon=True,
+    )
+    thread.start()
+
+    logger.info(f"Task {task_id} started for {file.filename} (pages={pages or 'all'})")
+
+    return {
+        "task_id": task_id,
+        "status": "pending",
+        "message": "任务已提交，正在处理中",
+        "filename": file.filename,
+        "pages": pages or "all",
+    }
+
+
+@app.get("/api/progress/{task_id}")
+async def get_progress(task_id: str):
+    """Get the progress of a document processing task.
+
+    Poll this endpoint to track progress. Returns progress info including:
+    - status: "pending" | "processing" | "done" | "error"
+    - phase: "parsing" | "extracting" | "importing" | "done"
+    - page_current: current page being processed
+    - page_total: total pages to process
+    - message: human-readable status message
+    - result: final result when status is "done"
+    - error: error message when status is "error"
+    """
+    progress = _get_progress(task_id)
+    if progress is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+
+    return progress
+
+
+@app.get("/api/cleanup")
+async def cleanup_tasks():
+    """Clean up old completed tasks."""
+    _cleanup_old_tasks()
+    return {"message": "Cleanup complete"}
+
+
+@app.get("/api/documents")
+async def list_documents():
+    """List all processed documents in the graph."""
     try:
-        # Parse
-        parser = _get_parser(file_path)
-        if not parser:
-            raise HTTPException(status_code=400, detail=f"Unsupported file type: {file.filename}")
-
-        # Pass page and OCR options for PDF parser
-        if isinstance(parser, PdfParser):
-            text = parser.parse(file_path, pages=pages, ocr_enabled=ocr, ocr_lang=ocr_lang)
-        else:
-            text = parser.parse(file_path)
-
-        # Extract - use custom source_doc if provided, otherwise use filename
-        doc = Document.from_path(file_path)
-        actual_source_doc = source_doc.strip() if source_doc else doc.source_doc_id
-
-        extractor = LlmExtractor(
-            api_key=config.llm.api_key,
-            model=config.llm.model,
-            api_base=config.llm.api_base,
-            max_entities=config.extraction.max_entities,
-            max_relations=config.extraction.max_relations,
-            temperature=config.extraction.temperature,
-        )
-        entities, relations = extractor.extract(text, source_doc=actual_source_doc)
-
-        # Import
         client = _get_client()
-        importer = GraphImporter(client)
-        counts = importer.import_graph(entities, relations)
-
-        return ProcessResponse(
-            entities=counts.get("entities", 0),
-            relations=counts.get("relations", 0),
-            source_doc=actual_source_doc,
+        results = client.run_query(
+            "MATCH (n) WHERE n.source_doc IS NOT NULL "
+            "RETURN n.source_doc AS doc_name, "
+            "count(DISTINCT n) AS entity_count, "
+            "collect(DISTINCT n.type) AS types, "
+            "min(n.created_at) AS first_seen, "
+            "max(n.created_at) AS last_seen "
+            "ORDER BY last_seen DESC"
         )
+        return [
+            {
+                "doc_name": r.get("doc_name", ""),
+                "entity_count": r.get("entity_count", 0),
+                "type_count": len(r.get("types", [])),
+                "types": r.get("types", []),
+                "first_seen": r.get("first_seen", ""),
+                "last_seen": r.get("last_seen", ""),
+            }
+            for r in results
+        ]
     except Exception as e:
-        logger.error(f"Error processing {file.filename}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        # Clean up
-        if file_path.exists():
-            file_path.unlink()
 
 
 @app.post("/api/merge", response_model=MergeResponse)
@@ -272,7 +462,7 @@ async def get_stats():
 
 
 @app.get("/api/entities", response_model=list[EntityItem])
-async def list_entities(limit: int = Query(50, le=500)):
+async def list_entities(limit: int = Query(50, le=10000)):
     """List entities in the graph."""
     try:
         client = _get_client()
@@ -291,7 +481,7 @@ async def list_entities(limit: int = Query(50, le=500)):
 
 
 @app.get("/api/relations", response_model=list[RelationItem])
-async def list_relations(limit: int = Query(50, le=500)):
+async def list_relations(limit: int = Query(50, le=10000)):
     """List relations in the graph."""
     try:
         client = _get_client()

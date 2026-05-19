@@ -21,7 +21,6 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
 
-        /* Header */
         .header {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
@@ -37,13 +36,11 @@
         .health-dot.ok { background: var(--success); box-shadow: 0 0 6px var(--success); }
         .health-dot.err { background: var(--danger); }
 
-        /* Layout */
         .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
         .grid { display: grid; gap: 1.5rem; }
         .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
         .grid-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 
-        /* Cards */
         .card {
             background: var(--card);
             border-radius: 12px;
@@ -53,12 +50,10 @@
         }
         .card h2 { font-size: 1.1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
 
-        /* Stats */
         .stat { text-align: center; padding: 1rem; }
         .stat .number { font-size: 2rem; font-weight: 700; color: var(--primary); }
         .stat .label { font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem; }
 
-        /* Upload */
         .upload-zone {
             border: 2px dashed var(--border);
             border-radius: 12px;
@@ -76,7 +71,6 @@
         .upload-zone .formats { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
         #file-input { display: none; }
 
-        /* Buttons */
         .btn {
             display: inline-flex;
             align-items: center;
@@ -97,14 +91,12 @@
         .btn-success { background: var(--success); color: white; }
         .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 
-        /* Tables */
         .table-wrap { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
         th { color: var(--text-muted); font-weight: 500; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
         tr:hover td { background: rgba(99, 102, 241, 0.03); }
 
-        /* Tags */
         .tag {
             display: inline-block;
             padding: 0.2rem 0.6rem;
@@ -119,15 +111,12 @@
         .tag-product { background: #fce7f3; color: #be185d; }
         .tag-other { background: #f1f5f9; color: #475569; }
 
-        /* Query */
         .query-box { width: 100%; min-height: 80px; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.85rem; resize: vertical; }
         .query-box:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
 
-        /* Loading */
         .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: white; animation: spin 0.6s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Toast */
         .toast-container { position: fixed; top: 1rem; right: 1rem; z-index: 1000; display: flex; flex-direction: column; gap: 0.5rem; }
         .toast {
             padding: 0.75rem 1.25rem;
@@ -141,7 +130,6 @@
         .toast-error { background: var(--danger); }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-        /* Tabs */
         .tabs { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 1rem; }
         .tab { padding: 0.75rem 1.25rem; cursor: pointer; font-weight: 500; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
         .tab:hover { color: var(--text); }
@@ -149,7 +137,62 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* Responsive */
+        .progress-container {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f0f9ff;
+            border-radius: 8px;
+            border: 1px solid #bae6fd;
+        }
+        .progress-container.visible { display: block; }
+        .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .progress-phase { font-size: 0.85rem; font-weight: 500; color: var(--primary-dark); }
+        .progress-percentage { font-size: 0.85rem; font-weight: 600; color: var(--primary); }
+        .progress-bar-bg { width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--primary-dark)); border-radius: 4px; transition: width 0.3s ease; width: 0%; }
+        .progress-detail { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
+        .progress-detail .phase-icon { margin-right: 0.25rem; }
+
+        /* Viz tab styles */
+        #network, #query-network {
+            width: 100%; height: 600px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fafbfc;
+        }
+        .viz-controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
+        .viz-controls .filter-group { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+        .filter-btn {
+            padding: 0.3rem 0.7rem; border: 1px solid var(--border); border-radius: 6px;
+            background: white; font-size: 0.8rem; cursor: pointer; transition: all 0.15s;
+        }
+        .filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .filter-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .viz-stats { font-size: 0.8rem; color: var(--text-muted); margin-left: auto; }
+        .node-detail {
+            margin-top: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px;
+            border: 1px solid var(--border); display: none;
+        }
+        .node-detail.visible { display: block; }
+        .search-input { padding: 0.4rem 0.7rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; width: 200px; }
+        .search-input:focus { outline: none; border-color: var(--primary); }
+
+        /* Query result view toggle */
+        .view-toggle { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .view-toggle .view-btn {
+            padding: 0.5rem 1rem; border: none; background: white; cursor: pointer;
+            font-size: 0.85rem; color: var(--text-muted); transition: all 0.15s;
+            border-right: 1px solid var(--border);
+        }
+        .view-toggle .view-btn:last-child { border-right: none; }
+        .view-toggle .view-btn.active { background: var(--primary); color: white; }
+        .view-toggle .view-btn:hover:not(.active) { background: #f1f5f9; }
+        .view-list { display: block; }
+        .view-graph { display: none; }
+        .view-list.hidden { display: none; }
+        .view-graph.visible { display: block; }
+
         @media (max-width: 640px) {
             .container { padding: 1rem; }
             .header { padding: 1rem; }
@@ -171,7 +214,6 @@
 <div class="toast-container" id="toast-container"></div>
 
 <div class="container">
-    <!-- Stats Row -->
     <div class="grid grid-3" style="margin-bottom: 1.5rem;">
         <div class="card stat">
             <div class="number" id="stat-nodes">-</div>
@@ -187,12 +229,12 @@
         </div>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
         <div class="tab active" data-tab="upload">📄 上传文档</div>
+        <div class="tab" data-tab="documents">📚 已处理文档</div>
         <div class="tab" data-tab="entities">🏷️ 实体列表</div>
         <div class="tab" data-tab="relations">🔗 关系列表</div>
-        <div class="tab" data-tab="query">🔍 查询</div>
+        <div class="tab" data-tab="viz">🕸️ 图谱查询</div>
     </div>
 
     <!-- Tab: Upload -->
@@ -206,8 +248,6 @@
                     <div class="formats">支持 PDF, Markdown, TXT, DOCX</div>
                 </div>
                 <input type="file" id="file-input" accept=".pdf,.md,.markdown,.txt,.docx">
-
-                <!-- PDF Options Panel (hidden by default) -->
                 <div id="pdf-options" style="display: none; margin-top: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border);">
                     <div style="margin-bottom: 0.75rem;">
                         <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">📄 文件信息</label>
@@ -225,19 +265,26 @@
                         </label>
                     </div>
                 </div>
-
+                <div class="progress-container" id="progress-container">
+                    <div class="progress-header">
+                        <span class="progress-phase" id="progress-phase">正在处理...</span>
+                        <span class="progress-percentage" id="progress-percentage">0%</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progress-bar-fill"></div>
+                    </div>
+                    <div class="progress-detail" id="progress-detail">
+                        <span class="phase-icon">📄</span> <span id="progress-message">准备中...</span>
+                    </div>
+                </div>
                 <div id="upload-status" style="margin-top: 1rem;"></div>
-
-                <!-- Submit button (hidden by default, shown when file selected) -->
                 <div id="submit-section" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border);">
                     <div style="margin-bottom: 0.75rem;">
                         <label style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">🏷️ 来源文档名 (source_doc)</label>
                         <input type="text" id="source-doc" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem;">
                         <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">默认是文件名，可自定义修改</div>
                     </div>
-                    <button class="btn btn-success" onclick="processSelectedFile()" id="submit-btn" style="width: 100%; justify-content: center; font-size: 1rem; padding: 0.75rem;">
-                        🚀 开始处理
-                    </button>
+                    <button class="btn btn-success" onclick="processSelectedFile()" id="submit-btn" style="width: 100%; justify-content: center; font-size: 1rem; padding: 0.75rem;">🚀 开始处理</button>
                 </div>
             </div>
             <div class="card">
@@ -248,6 +295,19 @@
                     <button class="btn btn-outline" onclick="exportGraph('cypher')">📦 导出 Cypher</button>
                     <button class="btn btn-outline" onclick="refreshStats()">🔄 刷新统计</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tab: Documents -->
+    <div class="tab-content" id="tab-documents">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin: 0;">📚 已处理文档</h2>
+                <button class="btn btn-outline" onclick="loadDocuments()">🔄 刷新</button>
+            </div>
+            <div class="table-wrap" id="documents-table">
+                <p style="color: var(--text-muted); padding: 1rem;">加载中...</p>
             </div>
         </div>
     </div>
@@ -278,28 +338,81 @@
         </div>
     </div>
 
-    <!-- Tab: Query -->
-    <div class="tab-content" id="tab-query">
+    <!-- Tab: Viz + Query (merged) -->
+    <div class="tab-content" id="tab-viz">
         <div class="card">
-            <h2>🔍 Cypher 查询</h2>
-            <div style="margin-top: 1rem;">
-                <textarea class="query-box" id="cypher-input" placeholder="输入 Cypher 查询语句...&#10;&#10;例如: MATCH (n) RETURN n.name, n.type LIMIT 20"></textarea>
-                <div class="btn-group" style="margin-top: 0.75rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin: 0;">🕸️ 图谱查询</h2>
+            </div>
+
+            <!-- Query Section -->
+            <div style="margin-bottom: 1rem;">
+                <textarea class="query-box" id="cypher-input" placeholder="输入 Cypher 查询语句...&#10;&#10;例如: MATCH (n) RETURN n.name, n.type LIMIT 20" style="min-height: 60px;"></textarea>
+                <div class="btn-group" style="margin-top: 0.5rem;">
                     <button class="btn btn-primary" onclick="runQuery()">▶️ 执行查询</button>
                     <button class="btn btn-outline" onclick="setQuery('MATCH (n) RETURN n.name, n.type, n.source_doc LIMIT 20')">📋 查全部</button>
                     <button class="btn btn-outline" onclick="setQuery('MATCH (a)-[r]->(b) RETURN a.name, type(r), b.name LIMIT 20')">🔗 查关系</button>
+                    <button class="btn btn-outline" onclick="loadVisualization()" style="margin-left: auto;">🌐 加载全图</button>
                 </div>
             </div>
-            <div style="margin-top: 1.5rem;" id="query-results"></div>
+
+            <!-- Query Results -->
+            <div id="query-result-section" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span id="query-result-count" style="font-size: 0.85rem; color: var(--text-muted);"></span>
+                    <div class="view-toggle">
+                        <button class="view-btn active" data-view="list" onclick="switchView('list')">📋 列表</button>
+                        <button class="view-btn" data-view="graph" onclick="switchView('graph')">🕸️ 图形</button>
+                    </div>
+                </div>
+                <!-- List view -->
+                <div class="view-list" id="query-result-list"></div>
+                <!-- Graph view -->
+                <div class="view-graph" id="query-result-graph">
+                    <div id="query-network"></div>
+                    <div class="node-detail" id="query-node-detail">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div>
+                                <h3 id="query-detail-name" style="margin: 0;"></h3>
+                                <span id="query-detail-type" class="tag"></span>
+                            </div>
+                            <button class="btn btn-outline" onclick="closeQueryDetail()" style="padding: 0.25rem 0.5rem;">✕</button>
+                        </div>
+                        <div id="query-detail-connections" style="margin-top: 0.5rem;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Full Graph Controls -->
+            <div id="full-graph-section">
+                <div class="viz-controls">
+                    <input type="text" class="search-input" id="viz-search" placeholder="🔍 搜索实体名..." oninput="vizSearch()">
+                    <div class="filter-group" id="viz-filters"></div>
+                    <span class="viz-stats" id="viz-stats"></span>
+                </div>
+                <div id="network" style="width: 100%; height: 600px; border: 1px solid var(--border); border-radius: 8px; background: #fafbfc;"></div>
+                <div class="node-detail" id="node-detail">
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <h3 id="detail-name" style="margin: 0;"></h3>
+                            <span id="detail-type" class="tag"></span>
+                        </div>
+                        <button class="btn btn-outline" onclick="closeDetail()" style="padding: 0.25rem 0.5rem;">✕</button>
+                    </div>
+                    <p id="detail-source" style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;"></p>
+                    <div id="detail-connections" style="margin-top: 0.5rem;"></div>
+                </div>
+                <div style="margin-top: 0.75rem;">
+                    <button class="btn btn-outline" onclick="fitNetwork()">🎯 适应窗口</button>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    // API base URL
     const API = window.location.origin;
 
-    // Toast notifications
     function toast(msg, type = 'success') {
         const container = document.getElementById('toast-container');
         const t = document.createElement('div');
@@ -309,7 +422,6 @@
         setTimeout(() => t.remove(), 3000);
     }
 
-    // Health check
     async function checkHealth() {
         const dot = document.getElementById('health-dot');
         const text = document.getElementById('health-text');
@@ -328,26 +440,51 @@
         }
     }
 
-    // Refresh stats
     async function refreshStats() {
         try {
             const res = await fetch(`${API}/api/stats`);
             const data = await res.json();
             document.getElementById('stat-nodes').textContent = data.nodes;
             document.getElementById('stat-rels').textContent = data.relationships;
-            // Count unique source docs from entities
-            const entities = await fetch(`${API}/api/entities?limit=1000`).then(r => r.json());
-            const docs = new Set(entities.map(e => e.source).filter(Boolean));
-            document.getElementById('stat-docs').textContent = docs.size;
+            const docs = await fetch(`${API}/api/documents`).then(r => r.json());
+            document.getElementById('stat-docs').textContent = docs.length;
         } catch (e) {
             toast('获取统计失败', 'error');
         }
     }
 
-    // Load entities
+    async function loadDocuments() {
+        try {
+            const res = await fetch(`${API}/api/documents`);
+            const data = await res.json();
+            if (!data.length) {
+                document.getElementById('documents-table').innerHTML = '<p style="color: var(--text-muted); padding: 1rem;">暂无已处理文档</p>';
+                return;
+            }
+            let html = '<table><thead><tr><th>文档名称</th><th>实体数</th><th>类型数</th><th>实体类型</th><th>首次处理</th><th>最近处理</th></tr></thead><tbody>';
+            data.forEach(d => {
+                const typeTags = d.types.map(t => `<span class="tag ${getTagClass(t)}">${escapeHtml(t)}</span>`).join(' ');
+                const firstSeen = d.first_seen ? new Date(d.first_seen).toLocaleString('zh-CN') : '-';
+                const lastSeen = d.last_seen ? new Date(d.last_seen).toLocaleString('zh-CN') : '-';
+                html += `<tr>
+                    <td><strong>${escapeHtml(d.doc_name)}</strong></td>
+                    <td>${d.entity_count}</td>
+                    <td>${d.type_count}</td>
+                    <td style="max-width: 300px;">${typeTags}</td>
+                    <td style="font-size: 0.85rem; color: var(--text-muted);">${firstSeen}</td>
+                    <td style="font-size: 0.85rem; color: var(--text-muted);">${lastSeen}</td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            document.getElementById('documents-table').innerHTML = html;
+        } catch {
+            document.getElementById('documents-table').innerHTML = '<p style="color: var(--danger); padding: 1rem;">加载失败</p>';
+        }
+    }
+
     async function loadEntities() {
         try {
-            const res = await fetch(`${API}/api/entities`);
+            const res = await fetch(`${API}/api/entities?limit=10000`);
             const data = await res.json();
             if (!data.length) {
                 document.getElementById('entities-table').innerHTML = '<p style="color: var(--text-muted); padding: 1rem;">暂无实体数据</p>';
@@ -356,11 +493,7 @@
             let html = '<table><thead><tr><th>名称</th><th>类型</th><th>来源文档</th></tr></thead><tbody>';
             data.forEach(e => {
                 const tagClass = getTagClass(e.type);
-                html += `<tr>
-                    <td><strong>${escapeHtml(e.name)}</strong></td>
-                    <td><span class="tag ${tagClass}">${escapeHtml(e.type)}</span></td>
-                    <td style="color: var(--text-muted); font-size: 0.85rem;">${escapeHtml(e.source || '-')}</td>
-                </tr>`;
+                html += `<tr><td><strong>${escapeHtml(e.name)}</strong></td><td><span class="tag ${tagClass}">${escapeHtml(e.type)}</span></td><td style="color: var(--text-muted); font-size: 0.85rem;">${escapeHtml(e.source || '-')}</td></tr>`;
             });
             html += '</tbody></table>';
             document.getElementById('entities-table').innerHTML = html;
@@ -369,10 +502,9 @@
         }
     }
 
-    // Load relations
     async function loadRelations() {
         try {
-            const res = await fetch(`${API}/api/relations`);
+            const res = await fetch(`${API}/api/relations?limit=10000`);
             const data = await res.json();
             if (!data.length) {
                 document.getElementById('relations-table').innerHTML = '<p style="color: var(--text-muted); padding: 1rem;">暂无关系数据</p>';
@@ -380,11 +512,7 @@
             }
             let html = '<table><thead><tr><th>源实体</th><th>关系</th><th>目标实体</th></tr></thead><tbody>';
             data.forEach(r => {
-                html += `<tr>
-                    <td><strong>${escapeHtml(r.source)}</strong></td>
-                    <td><span class="tag tag-technology">${escapeHtml(r.type)}</span></td>
-                    <td><strong>${escapeHtml(r.target)}</strong></td>
-                </tr>`;
+                html += `<tr><td><strong>${escapeHtml(r.source)}</strong></td><td><span class="tag tag-technology">${escapeHtml(r.type)}</span></td><td><strong>${escapeHtml(r.target)}</strong></td></tr>`;
             });
             html += '</tbody></table>';
             document.getElementById('relations-table').innerHTML = html;
@@ -393,20 +521,11 @@
         }
     }
 
-    // Tag class mapping
     function getTagClass(type) {
-        const map = {
-            'Person': 'tag-person',
-            'Company': 'tag-company',
-            'Organization': 'tag-company',
-            'Technology': 'tag-technology',
-            'Product': 'tag-product',
-            'Concept': 'tag-concept',
-        };
+        const map = { 'Person': 'tag-person', 'Company': 'tag-company', 'Organization': 'tag-company', 'Technology': 'tag-technology', 'Product': 'tag-product', 'Concept': 'tag-concept' };
         return map[type] || 'tag-other';
     }
 
-    // Escape HTML
     function escapeHtml(str) {
         const div = document.createElement('div');
         div.textContent = str || '';
@@ -423,37 +542,32 @@
     const submitSection = document.getElementById('submit-section');
     const sourceDocInput = document.getElementById('source-doc');
     const submitBtn = document.getElementById('submit-btn');
+    const progressContainer = document.getElementById('progress-container');
+    const progressPhase = document.getElementById('progress-phase');
+    const progressPercentage = document.getElementById('progress-percentage');
+    const progressBarFill = document.getElementById('progress-bar-fill');
+    const progressMessage = document.getElementById('progress-message');
     let selectedFile = null;
+    let progressPollInterval = null;
 
     uploadZone.addEventListener('click', () => fileInput.click());
     uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('drag'); });
     uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
-    uploadZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadZone.classList.remove('drag');
-        if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]);
-    });
+    uploadZone.addEventListener('drop', (e) => { e.preventDefault(); uploadZone.classList.remove('drag'); if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]); });
     fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFileSelect(fileInput.files[0]); });
 
-    // When a file is selected, show options and submit button
     async function handleFileSelect(file) {
         selectedFile = file;
         const isPdf = file.name.toLowerCase().endsWith('.pdf');
-
-        // Set default source_doc to filename (without extension)
         const nameWithoutExt = file.name.replace(/\.[^.]+$/, '');
         sourceDocInput.value = nameWithoutExt;
-
         if (isPdf) {
-            // Show PDF options panel and submit button
             pdfOptions.style.display = 'block';
             submitSection.style.display = 'block';
             pdfInfo.textContent = '正在获取页数...';
             pageRangeInput.value = '';
             submitBtn.innerHTML = '🚀 开始处理';
             submitBtn.disabled = false;
-
-            // Get PDF page count
             try {
                 const formData = new FormData();
                 formData.append('file', file);
@@ -463,11 +577,8 @@
                     pdfInfo.textContent = `${info.filename} — 共 ${info.pages} 页`;
                     pageRangeInput.placeholder = `例: 1,3,5-${info.pages}（共${info.pages}页）`;
                 }
-            } catch {
-                pdfInfo.textContent = file.name;
-            }
+            } catch { pdfInfo.textContent = file.name; }
         } else {
-            // Hide PDF options but show submit button for non-PDF files
             pdfOptions.style.display = 'none';
             submitSection.style.display = 'block';
             submitBtn.innerHTML = '🚀 开始处理';
@@ -475,98 +586,127 @@
         }
     }
 
-    // Process the selected file when submit button is clicked
-    async function processSelectedFile() {
-        if (!selectedFile) {
-            toast('请先选择文件', 'error');
-            return;
+    function updateProgress(info) {
+        progressContainer.classList.add('visible');
+        const phase = info.phase || 'processing';
+        const status = info.status || 'processing';
+        const pageCurrent = info.page_current || 0;
+        const pageTotal = info.page_total || 0;
+        const pageAbsolute = info.page_absolute || 0;
+        const message = info.message || '处理中...';
+        const phaseIcons = { 'upload': '📤', 'parsing': '📄', 'extracting': '🧠', 'importing': '📊', 'done': '✅' };
+        const phaseLabels = { 'upload': '上传中', 'parsing': '解析文档', 'extracting': '提取实体和关系', 'importing': '导入到图谱', 'done': '处理完成', 'error': '处理失败' };
+        progressPhase.textContent = phaseLabels[phase] || '处理中';
+        let percentage = 0;
+        if (status === 'done') { percentage = 100; }
+        else if (status === 'error') { percentage = 100; progressBarFill.style.background = 'var(--danger)'; }
+        else if (pageTotal > 0) { percentage = Math.round((pageCurrent / pageTotal) * 80); }
+        else if (phase === 'extracting') { percentage = 85; }
+        else if (phase === 'importing') { percentage = 95; }
+        progressPercentage.textContent = `${percentage}%`;
+        progressBarFill.style.width = `${percentage}%`;
+        let detailMsg = message;
+        if (pageTotal > 0 && phase === 'parsing') {
+            detailMsg = pageAbsolute > 0 ? `正在解析第 ${pageAbsolute} 页 | 任务进度: 第 ${pageCurrent}/${pageTotal} 页` : `任务进度: 第 ${pageCurrent}/${pageTotal} 页`;
+        } else if (pageTotal > 0 && (phase === 'extracting' || phase === 'importing')) {
+            detailMsg = `${message} | 共 ${pageTotal} 页`;
         }
+        progressMessage.textContent = detailMsg;
+        const icon = phaseIcons[phase] || '⏳';
+        document.querySelector('.phase-icon').textContent = icon;
+    }
 
+    function startProgressPolling(taskId) {
+        if (progressPollInterval) clearInterval(progressPollInterval);
+        progressPollInterval = setInterval(async () => {
+            try {
+                const res = await fetch(`${API}/api/progress/${taskId}`);
+                if (!res.ok) { clearInterval(progressPollInterval); return; }
+                const info = await res.json();
+                updateProgress(info);
+                if (info.status === 'done' || info.status === 'error') {
+                    clearInterval(progressPollInterval);
+                    progressPollInterval = null;
+                    handleTaskComplete(info);
+                }
+            } catch {}
+        }, 1000);
+    }
+
+    function handleTaskComplete(info) {
+        if (info.status === 'done') {
+            const result = info.result || {};
+            document.getElementById('upload-status').innerHTML = `<div style="padding: 1rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;"><p style="color: var(--success); font-weight: 500;">✅ 处理完成!</p><p style="color: var(--text-muted); font-size: 0.9rem;">实体: ${result.entities || 0} | 关系: ${result.relations || 0} | 来源: ${result.source_doc || '-'}</p></div>`;
+            toast('文档处理成功!');
+            refreshStats();
+            setTimeout(() => {
+                pdfOptions.style.display = 'none';
+                submitSection.style.display = 'none';
+                progressContainer.classList.remove('visible');
+                pageRangeInput.value = '';
+                selectedFile = null;
+                fileInput.value = '';
+                submitBtn.innerHTML = '🚀 开始处理';
+                submitBtn.disabled = false;
+            }, 3000);
+        } else {
+            document.getElementById('upload-status').innerHTML = `<p style="color: var(--danger);">❌ 处理失败: ${escapeHtml(info.error || '未知错误')}</p>`;
+            toast(info.error || '处理失败', 'error');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '🚀 开始处理';
+        }
+    }
+
+    async function processSelectedFile() {
+        if (!selectedFile) { toast('请先选择文件', 'error'); return; }
         const isPdf = selectedFile.name.toLowerCase().endsWith('.pdf');
         const status = document.getElementById('upload-status');
-
-        // Disable button and show loading
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner"></span> 处理中...';
-
-        // Build status message
+        submitBtn.innerHTML = '<span class="spinner"></span> 提交中...';
+        status.innerHTML = '';
         let pageInfo = '';
         if (isPdf) {
             const pages = pageRangeInput.value.trim();
             const ocr = ocrCheckbox.checked;
             pageInfo = ` | 页码: ${pages || '全部'} | OCR: ${ocr ? '开' : '关'}`;
         }
-        status.innerHTML = `<p style="color: var(--text-muted);">📄 处理中: <strong>${escapeHtml(selectedFile.name)}</strong>${pageInfo} <span class="spinner"></span></p>`;
-
+        status.innerHTML = `<p style="color: var(--text-muted);">📄 提交中: <strong>${escapeHtml(selectedFile.name)}</strong>${pageInfo}</p>`;
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('source_doc', sourceDocInput.value.trim() || selectedFile.name.replace(/\.[^.]+$/, ''));
-
-        // Add PDF-specific parameters
         if (isPdf) {
             const pages = pageRangeInput.value.trim();
             if (pages) formData.append('pages', pages);
             formData.append('ocr', ocrCheckbox.checked);
         }
-
         try {
             const res = await fetch(`${API}/api/process`, { method: 'POST', body: formData });
             const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.detail || '处理失败');
-            }
-
-            status.innerHTML = `
-                <div style="padding: 1rem; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
-                    <p style="color: var(--success); font-weight: 500;">✅ 处理完成!</p>
-                    <p style="color: var(--text-muted); font-size: 0.9rem;">
-                        实体: ${data.entities} | 关系: ${data.relations} | 来源: ${data.source_doc}
-                    </p>
-                </div>`;
-            toast('文档处理成功!');
-            refreshStats();
-
-            // Reset UI
-            pdfOptions.style.display = 'none';
-            submitSection.style.display = 'none';
-            pageRangeInput.value = '';
-            selectedFile = null;
-            fileInput.value = '';
-            submitBtn.innerHTML = '🚀 开始处理';
-            submitBtn.disabled = false;
+            if (!res.ok) throw new Error(data.detail || '处理失败');
+            const taskId = data.task_id;
+            status.innerHTML = `<p style="color: var(--text-muted);">📄 处理中: <strong>${escapeHtml(selectedFile.name)}</strong> | 任务ID: ${taskId}</p>`;
+            startProgressPolling(taskId);
         } catch (e) {
-            status.innerHTML = `<p style="color: var(--danger);">❌ 处理失败: ${escapeHtml(e.message)}</p>`;
+            status.innerHTML = `<p style="color: var(--danger);">❌ 提交失败: ${escapeHtml(e.message)}</p>`;
             toast(e.message, 'error');
-            // Re-enable button
             submitBtn.disabled = false;
             submitBtn.innerHTML = '🚀 开始处理';
         }
     }
 
-    // Handle the original handleFile for drag-drop
-    async function handleFile(file) {
-        handleFileSelect(file);
-    }
-
-    // Merge graph
     async function mergeGraph() {
         const btn = event.target;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> 合并中...';
         try {
-            const res = await fetch(`${API}/api/merge`, { method: 'POST' });
-            const data = await res.json();
+            await fetch(`${API}/api/merge`, { method: 'POST' });
             toast('图谱合并完成!');
             refreshStats();
-        } catch {
-            toast('合并失败', 'error');
-        }
+        } catch { toast('合并失败', 'error'); }
         btn.disabled = false;
         btn.innerHTML = '🔗 合并图谱';
     }
 
-    // Export
     async function exportGraph(fmt) {
         try {
             const res = await fetch(`${API}/api/export?fmt=${fmt}`);
@@ -581,22 +721,50 @@
             a.click();
             URL.revokeObjectURL(url);
             toast(`已导出 ${ext} 文件`);
-        } catch {
-            toast('导出失败', 'error');
-        }
+        } catch { toast('导出失败', 'error'); }
     }
 
-    // Query
-    function setQuery(cypher) {
-        document.getElementById('cypher-input').value = cypher;
+    function setQuery(cypher) { document.getElementById('cypher-input').value = cypher; }
+
+    // =====================================================================
+    // Query + Visualization (merged)
+    // =====================================================================
+    let network = null;
+    let queryNetwork = null;
+    let allNodes = [];
+    let allEdges = [];
+    let activeTypes = new Set();
+    let queryResultNodes = [];
+    let queryResultEdges = [];
+
+    const typeColors = {
+        'Person': '#3b82f6', 'Organization': '#10b981', 'Company': '#10b981',
+        'Technology': '#f59e0b', 'Product': '#ec4899', 'Concept': '#8b5cf6',
+        'Location': '#06b6d4', 'Event': '#ef4444',
+    };
+
+    function switchView(view) {
+        document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`.view-btn[data-view="${view}"]`).classList.add('active');
+        const listEl = document.getElementById('query-result-list');
+        const graphEl = document.getElementById('query-result-graph');
+        if (view === 'list') {
+            listEl.classList.remove('hidden');
+            graphEl.classList.remove('visible');
+        } else {
+            listEl.classList.add('hidden');
+            graphEl.classList.add('visible');
+            renderQueryNetwork();
+        }
     }
 
     async function runQuery() {
         const cypher = document.getElementById('cypher-input').value.trim();
         if (!cypher) { toast('请输入查询语句', 'error'); return; }
 
-        const resultsDiv = document.getElementById('query-results');
-        resultsDiv.innerHTML = '<p style="color: var(--text-muted);">执行中...</p>';
+        const listEl = document.getElementById('query-result-list');
+        listEl.innerHTML = '<p style="color: var(--text-muted);">执行中...</p>';
+        document.getElementById('query-result-section').style.display = 'block';
 
         try {
             const res = await fetch(`${API}/api/query`, {
@@ -605,31 +773,371 @@
                 body: JSON.stringify({ cypher }),
             });
             const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.detail || '查询失败');
-            }
-
+            if (!res.ok) throw new Error(data.detail || '查询失败');
             if (!data.results.length) {
-                resultsDiv.innerHTML = '<p style="color: var(--text-muted);">无结果</p>';
+                document.getElementById('query-result-count').textContent = '无结果';
+                listEl.innerHTML = '<p style="color: var(--text-muted); padding: 1rem;">无结果</p>';
                 return;
             }
 
+            document.getElementById('query-result-count').textContent = `返回 ${data.count} 条结果`;
+
+            // List view
             const keys = Object.keys(data.results[0]);
-            let html = `<p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 0.5rem;">返回 ${data.count} 条结果</p>`;
-            html += '<div class="table-wrap"><table><thead><tr>';
+            let html = '<div class="table-wrap"><table><thead><tr>';
             keys.forEach(k => html += `<th>${escapeHtml(k)}</th>`);
             html += '</tr></thead><tbody>';
             data.results.forEach(row => {
                 html += '<tr>';
-                keys.forEach(k => html += `<td>${escapeHtml(String(row[k] ?? ''))}</td>`);
+                keys.forEach(k => {
+                    const val = row[k];
+                    if (typeof val === 'object') {
+                        html += `<td><code style="font-size: 0.8rem;">${escapeHtml(JSON.stringify(val))}</code></td>`;
+                    } else {
+                        html += `<td>${escapeHtml(String(val ?? ''))}</td>`;
+                    }
+                });
                 html += '</tr>';
             });
             html += '</tbody></table></div>';
-            resultsDiv.innerHTML = html;
+            listEl.innerHTML = html;
+
+            // Build graph data from query results
+            buildQueryGraph(data.results, keys);
+
+            // Switch to list view by default
+            switchView('list');
         } catch (e) {
-            resultsDiv.innerHTML = `<p style="color: var(--danger);">❌ ${escapeHtml(e.message)}</p>`;
+            listEl.innerHTML = `<p style="color: var(--danger);">❌ ${escapeHtml(e.message)}</p>`;
         }
+    }
+
+    function buildQueryGraph(results, keys) {
+        queryResultNodes = [];
+        queryResultEdges = [];
+        const nodeMap = {};
+
+        for (const row of results) {
+            for (const key of keys) {
+                const val = row[key];
+                if (val && typeof val === 'object' && val.id !== undefined) {
+                    // It's a node object from Neo4j
+                    const id = String(val.id);
+                    const label = val.name || val.title || val.label || String(val.id);
+                    const type = val.type || val.labels?.join('/') || 'Node';
+                    if (!nodeMap[id]) {
+                        nodeMap[id] = { id, label, group: type, sources: [] };
+                    }
+                    // Merge properties
+                    Object.assign(nodeMap[id], val);
+                    if (val.source_doc && !nodeMap[id].sources.includes(val.source_doc)) {
+                        nodeMap[id].sources.push(val.source_doc);
+                    }
+                }
+            }
+        }
+
+        // Also try to infer edges from relation objects
+        for (const row of results) {
+            for (const key of keys) {
+                const val = row[key];
+                if (val && typeof val === 'object' && val.type !== undefined && val.startNode !== undefined) {
+                    // It's a relationship object
+                    const fromId = String(val.startNode);
+                    const toId = String(val.endNode);
+                    const relType = val.type || 'RELATED';
+                    if (fromId && toId && fromId !== toId) {
+                        const edgeKey = `${fromId}-${toId}-${relType}`;
+                        if (!queryResultEdges.find(e => e.from === fromId && e.to === toId && e.label === relType)) {
+                            queryResultEdges.push({ from: fromId, to: toId, label: relType });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also build edges from rows with source/target columns
+        for (const row of results) {
+            const src = row.source || row.Source || row.from || row.src;
+            const tgt = row.target || row.Target || row.to || row.dst;
+            const relType = row.type || row.Type || row.relation || 'RELATED';
+            if (src && tgt) {
+                const fromId = `n_${src}`;
+                const toId = `n_${tgt}`;
+                if (!nodeMap[fromId]) {
+                    nodeMap[fromId] = { id: fromId, label: src, group: 'Entity', sources: [], _props: {} };
+                }
+                if (!nodeMap[toId]) {
+                    nodeMap[toId] = { id: toId, label: tgt, group: 'Entity', sources: [], _props: {} };
+                }
+                const edgeKey = `${fromId}-${toId}-${relType}`;
+                if (!queryResultEdges.find(e => e.from === fromId && e.to === toId && e.label === relType)) {
+                    queryResultEdges.push({ from: fromId, to: toId, label: relType });
+                }
+            }
+        }
+
+        // Fallback: if no nodes were found, treat each row as a node
+        // This handles flat results like: {name, type, source_doc}
+        if (Object.keys(nodeMap).length === 0) {
+            for (let i = 0; i < results.length; i++) {
+                const row = results[i];
+                const label = String(row.name || row.Name || row[Object.keys(row)[0]] || `Row ${i + 1}`);
+                const type = String(row.type || row.Type || row[Object.keys(row)[1]] || 'Entity');
+                const nodeId = `row_${i}`;
+                nodeMap[nodeId] = { id: nodeId, label, group: type, sources: [], _props: row };
+
+                // Connect consecutive rows
+                if (i > 0) {
+                    queryResultEdges.push({ from: `row_${i - 1}`, to: nodeId, label: '结果' });
+                }
+            }
+        }
+
+        queryResultNodes = Object.values(nodeMap);
+    }
+
+    function renderQueryNetwork() {
+        const container = document.getElementById('query-network');
+        if (!container) return;
+
+        if (!queryResultNodes.length) {
+            container.innerHTML = '<p style="color: var(--text-muted); padding: 2rem; text-align: center;">无法从查询结果构建图谱，请使用 MATCH 返回节点对象</p>';
+            return;
+        }
+
+        const nodes = new vis.DataSet(queryResultNodes.map(n => ({
+            id: n.id,
+            label: n.label,
+            color: {
+                background: typeColors[n.group] || '#94a3b8',
+                border: typeColors[n.group] || '#94a3b8',
+                hover: { background: typeColors[n.group] || '#94a3b8', border: '#1e293b' },
+            },
+            font: { color: '#1e293b', size: 14, face: 'sans-serif', bold: true },
+            shape: 'dot',
+            borderWidth: 2,
+            size: 25 + Math.min(15, queryResultEdges.filter(e => e.from === n.id || e.to === n.id).length * 3),
+        })));
+
+        const edges = new vis.DataSet(queryResultEdges.map(e => ({
+            from: e.from, to: e.to, label: e.label,
+            font: { size: 10, color: '#64748b', align: 'top' },
+            smooth: { type: 'curvedCW', roundness: 0.15 },
+            arrows: 'to',
+            color: { color: '#cbd5e1', highlight: '#6366f1' },
+            width: 1, hoverWidth: 0.5,
+        })));
+
+        if (queryNetwork) {
+            queryNetwork.setData({ nodes, edges });
+        } else {
+            queryNetwork = new vis.Network(container, { nodes, edges }, {
+                physics: {
+                    enabled: true, solver: 'forceAtlas2Based',
+                    forceAtlas2Based: { gravitationalConstant: -80, centralGravity: 0.01, springLength: 120, springConstant: 0.05, damping: 0.4 },
+                    stabilization: { iterations: 150, fit: true },
+                },
+                interaction: { hover: true, tooltipDelay: 100, zoomView: true, dragView: true, dragNodes: true },
+            });
+            queryNetwork.on('click', function(params) {
+                if (params.nodes.length > 0) showQueryNodeDetail(params.nodes[0]);
+                else closeQueryDetail();
+            });
+        }
+        setTimeout(() => { if (queryNetwork) queryNetwork.stabilize(); }, 500);
+    }
+
+    function showQueryNodeDetail(nodeId) {
+        const node = queryResultNodes.find(n => n.id === nodeId);
+        if (!node) return;
+        const detail = document.getElementById('query-node-detail');
+        detail.classList.add('visible');
+        document.getElementById('query-detail-name').textContent = node.label;
+        const typeSpan = document.getElementById('query-detail-type');
+        typeSpan.textContent = node.group;
+        typeSpan.style.background = (typeColors[node.group] || '#94a3b8') + '20';
+        typeSpan.style.color = typeColors[node.group] || '#94a3b8';
+        const connections = queryResultEdges.filter(e => e.from === nodeId || e.to === nodeId);
+        const connDiv = document.getElementById('query-detail-connections');
+        if (connections.length > 0) {
+            let html = '<p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">关联关系:</p><div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">';
+            connections.forEach(e => {
+                const isSource = e.from === nodeId;
+                const other = isSource ? e.to : e.from;
+                const arrow = isSource ? '→' : '←';
+                const otherLabel = queryResultNodes.find(n => n.id === other)?.label || other;
+                html += `<span class="tag tag-technology" style="cursor: pointer;">${escapeHtml(e.label)} ${arrow} ${escapeHtml(otherLabel)}</span>`;
+            });
+            html += '</div>';
+            connDiv.innerHTML = html;
+        } else {
+            connDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">无关联关系</p>';
+        }
+    }
+
+    function closeQueryDetail() {
+        document.getElementById('query-node-detail').classList.remove('visible');
+    }
+
+    async function loadVisualization() {
+        const container = document.getElementById('network');
+        container.innerHTML = '<p style="color: var(--text-muted); padding: 2rem; text-align: center;">加载中...</p>';
+        try {
+            const [entitiesRes, relationsRes] = await Promise.all([
+                fetch(`${API}/api/entities?limit=10000`),
+                fetch(`${API}/api/relations?limit=10000`),
+            ]);
+            const entities = await entitiesRes.json();
+            const relations = await relationsRes.json();
+            if (!entities.length) {
+                container.innerHTML = '<p style="color: var(--text-muted); padding: 2rem; text-align: center;">暂无图谱数据，请先上传文档处理</p>';
+                return;
+            }
+
+            const nodeMap = {};
+            for (const e of entities) {
+                const key = `${e.name}::${e.type}`;
+                if (nodeMap[key]) {
+                    if (e.source && !nodeMap[key].sources.includes(e.source)) nodeMap[key].sources.push(e.source);
+                } else {
+                    nodeMap[key] = { id: key, label: e.name, group: e.type, title: `${e.name} (${e.type})`, sources: e.source ? [e.source] : [] };
+                }
+            }
+            allNodes = Object.values(nodeMap);
+
+            allEdges = [];
+            const edgeMap = {};
+            for (const r of (relations || [])) {
+                const fromId = allNodes.find(n => n.label === r.source)?.id;
+                const toId = allNodes.find(n => n.label === r.target)?.id;
+                if (fromId && toId && fromId !== toId) {
+                    const key = `${fromId}-${toId}-${r.type}`;
+                    if (!edgeMap[key]) edgeMap[key] = { from: fromId, to: toId, label: r.type };
+                }
+            }
+            allEdges = Object.values(edgeMap);
+
+            const types = [...new Set(allNodes.map(n => n.group))];
+            activeTypes = new Set(types);
+
+            const filtersDiv = document.getElementById('viz-filters');
+            filtersDiv.innerHTML = types.map(t => {
+                const count = allNodes.filter(n => n.group === t).length;
+                const color = typeColors[t] || '#94a3b8';
+                return `<button class="filter-btn" data-type="${t}" style="background: ${color}15; color: ${color}; border-color: ${color}30;" onclick="toggleType('${t}', this)">${t} (${count})</button>`;
+            }).join('');
+
+            renderNetwork();
+        } catch (e) {
+            container.innerHTML = `<p style="color: var(--danger); padding: 2rem; text-align: center;">加载失败: ${escapeHtml(e.message)}</p>`;
+        }
+    }
+
+    function renderNetwork() {
+        const container = document.getElementById('network');
+        const visibleNodes = allNodes.filter(n => activeTypes.has(n.group));
+        const visibleIds = new Set(visibleNodes.map(n => n.id));
+        const visibleEdges = allEdges.filter(e => visibleIds.has(e.from) && visibleIds.has(e.to));
+        document.getElementById('viz-stats').textContent = `显示 ${visibleNodes.length} 个实体，${visibleEdges.length} 条关系`;
+
+        const nodes = new vis.DataSet(visibleNodes.map(n => ({
+            id: n.id, label: n.label,
+            color: { background: typeColors[n.group] || '#94a3b8', border: typeColors[n.group] || '#94a3b8', hover: { background: typeColors[n.group] || '#94a3b8', border: '#1e293b' } },
+            font: { color: '#1e293b', size: 14, face: 'sans-serif', bold: true },
+            shape: 'dot', borderWidth: 2,
+            size: 25 + Math.min(15, visibleEdges.filter(e => e.from === n.id || e.to === n.id).length * 3),
+        })));
+
+        const edges = new vis.DataSet(visibleEdges.map(e => ({
+            from: e.from, to: e.to, label: e.label,
+            font: { size: 10, color: '#64748b', align: 'top' },
+            smooth: { type: 'curvedCW', roundness: 0.15 },
+            arrows: 'to', color: { color: '#cbd5e1', highlight: '#6366f1' },
+            width: 1, hoverWidth: 0.5,
+        })));
+
+        if (network) { network.setData({ nodes, edges }); network.setOptions({ physics: { enabled: true, solver: 'forceAtlas2Based', forceAtlas2Based: { gravitationalConstant: -80, centralGravity: 0.01, springLength: 120, springConstant: 0.05, damping: 0.4 }, stabilization: { iterations: 150, fit: true } } }); }
+        else {
+            network = new vis.Network(container, { nodes, edges }, {
+                physics: { enabled: true, solver: 'forceAtlas2Based', forceAtlas2Based: { gravitationalConstant: -80, centralGravity: 0.01, springLength: 120, springConstant: 0.05, damping: 0.4 }, stabilization: { iterations: 150, fit: true } },
+                interaction: { hover: true, tooltipDelay: 100, zoomView: true, dragView: true, dragNodes: true },
+            });
+            network.on('click', function(params) {
+                if (params.nodes.length > 0) showNodeDetail(params.nodes[0]);
+                else closeDetail();
+            });
+        }
+        setTimeout(() => { if (network) network.stabilize(); }, 500);
+    }
+
+    function toggleType(type, btn) {
+        if (activeTypes.has(type)) { activeTypes.delete(type); btn.style.opacity = '0.3'; }
+        else { activeTypes.add(type); btn.style.opacity = '1'; }
+        renderNetwork();
+    }
+
+    function vizSearch() {
+        const query = document.getElementById('viz-search').value.trim().toLowerCase();
+        if (!network) return;
+        if (!query) {
+            const nodeIds = network.body.data.nodes.getIds();
+            network.body.data.nodes.update(nodeIds.map(id => {
+                const node = allNodes.find(n => n.id === id);
+                return { id, color: { background: typeColors[node?.group] || '#94a3b8', border: typeColors[node?.group] || '#94a3b8' } };
+            }));
+            return;
+        }
+        const matches = allNodes.filter(n => n.label.toLowerCase().includes(query));
+        const matchIds = new Set(matches.map(n => n.id));
+        const nodeIds = network.body.data.nodes.getIds();
+        network.body.data.nodes.update(nodeIds.map(id => {
+            if (matchIds.has(id)) return { id, color: { background: '#6366f1', border: '#1e293b' } };
+            return { id, color: { background: '#e2e8f0', border: '#e2e8f0' } };
+        }));
+    }
+
+    function showNodeDetail(nodeId) {
+        const node = allNodes.find(n => n.id === nodeId);
+        if (!node) return;
+        const detail = document.getElementById('node-detail');
+        detail.classList.add('visible');
+        document.getElementById('detail-name').textContent = node.label;
+        const typeSpan = document.getElementById('detail-type');
+        typeSpan.textContent = node.group;
+        typeSpan.style.background = (typeColors[node.group] || '#94a3b8') + '20';
+        typeSpan.style.color = typeColors[node.group] || '#94a3b8';
+        const sources = node.sources || [];
+        document.getElementById('detail-source').textContent = sources.length > 0 ? `来源文档: ${sources.join(', ')}` : '来源: 未知';
+        const connections = allEdges.filter(e => e.from === nodeId || e.to === nodeId);
+        const connDiv = document.getElementById('detail-connections');
+        if (connections.length > 0) {
+            let html = '<p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">关联关系:</p><div style="display: flex; flex-wrap: wrap; gap: 0.3rem;">';
+            connections.forEach(e => {
+                const isSource = e.from === nodeId;
+                const other = isSource ? e.to : e.from;
+                const arrow = isSource ? '→' : '←';
+                const otherLabel = allNodes.find(n => n.id === other)?.label || other;
+                html += `<span class="tag tag-technology" style="cursor: pointer;" onclick="focusNode('${other}')">${escapeHtml(e.label)} ${arrow} ${escapeHtml(otherLabel)}</span>`;
+            });
+            html += '</div>';
+            connDiv.innerHTML = html;
+        } else {
+            connDiv.innerHTML = '<p style="color: var(--text-muted); font-size: 0.85rem;">无关联关系</p>';
+        }
+    }
+
+    function closeDetail() { document.getElementById('node-detail').classList.remove('visible'); }
+
+    function focusNode(nodeId) {
+        if (!network) return;
+        network.focus(nodeId, { scale: 1.2, animation: true });
+        showNodeDetail(nodeId);
+    }
+
+    function fitNetwork() {
+        if (network) network.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
+        if (queryNetwork) queryNetwork.fit({ animation: { duration: 300, easingFunction: 'easeInOutQuad' } });
     }
 
     // Tabs
@@ -640,17 +1148,18 @@
             tab.classList.add('active');
             const target = tab.dataset.tab;
             document.getElementById(`tab-${target}`).classList.add('active');
-
-            // Load data on tab switch
+            if (target === 'documents') loadDocuments();
             if (target === 'entities') loadEntities();
             if (target === 'relations') loadRelations();
+            if (target === 'viz' && !network) loadVisualization();
         });
     });
 
-    // Init
     checkHealth();
     refreshStats();
 </script>
+
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 
 </body>
 </html>

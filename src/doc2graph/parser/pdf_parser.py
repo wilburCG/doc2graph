@@ -5,11 +5,14 @@ from __future__ import annotations
 import io
 import logging
 from pathlib import Path
-from typing import Sequence
+from typing import Callable, Sequence
 
 from doc2graph.parser.base import BaseParser
 
 logger = logging.getLogger(__name__)
+
+# Progress callback type: receives dict with phase, page_current, page_total, message
+ProgressCallback = Callable[[dict], None] | None
 
 
 def parse_page_range(page_spec: str | None, total_pages: int) -> list[int]:
@@ -56,6 +59,7 @@ class PdfParser(BaseParser):
         pages: str | None = None,
         ocr_enabled: bool = True,
         ocr_lang: str = "chi_sim+eng",
+        progress_callback: ProgressCallback = None,
     ) -> str:
         """Parse a PDF file, optionally extracting specific pages and using OCR.
 
@@ -65,6 +69,7 @@ class PdfParser(BaseParser):
                    None or "all" means all pages. Uses 1-based numbering.
             ocr_enabled: Whether to use OCR for pages with images.
             ocr_lang: Tesseract language pack (e.g. "chi_sim+eng").
+            progress_callback: Optional callback for progress reporting.
 
         Returns:
             Extracted text content.
@@ -75,7 +80,7 @@ class PdfParser(BaseParser):
 
         # Try PyMuPDF first (has built-in OCR + image extraction)
         try:
-            return self._parse_with_mupdf(p, pages, ocr_enabled, ocr_lang)
+            return self._parse_with_mupdf(p, pages, ocr_enabled, ocr_lang, progress_callback)
         except ImportError:
             pass
 
@@ -101,6 +106,7 @@ class PdfParser(BaseParser):
         page_spec: str | None,
         ocr_enabled: bool,
         ocr_lang: str,
+        progress_callback: ProgressCallback = None,
     ) -> str:
         import fitz  # pymupdf
 
@@ -112,7 +118,8 @@ class PdfParser(BaseParser):
             logger.info(f"Processing pages {page_spec} (0-based: {page_indices}) of {total_pages}")
 
         texts = []
-        for page_num in page_indices:
+        total = len(page_indices)
+        for i, page_num in enumerate(page_indices):
             page = doc[page_num]
 
             # Extract text
@@ -133,13 +140,29 @@ class PdfParser(BaseParser):
             else:
                 texts.append(f"{page_label}\n(No text content)")
 
+            # Report progress
+            if progress_callback:
+                progress_callback({
+                    "phase": "parsing",
+                    "page_current": i + 1,       # index in selected pages (1-based)
+                    "page_total": total,          # total selected pages
+                    "page_absolute": page_num + 1, # absolute page number in PDF
+                    "message": f"正在解析第 {page_num + 1} 页",
+                })
+
         doc.close()
         return "\n\n".join(texts)
 
     def _ocr_page_images(self, page, page_num: int, ocr_lang: str) -> str:
-        """Extract and OCR images from a PDF page."""
+        """Extract and OCR images from a PDF page.
+
+        Optimizations:
+        - Upscale images below 300 DPI for better OCR accuracy
+        - Set explicit DPI to avoid Tesseract "Invalid resolution" warnings
+        - Skip images that are too small or unlikely to contain text
+        """
         import pytesseract
-        from PIL import Image
+        from PIL import Image, ImageFilter
 
         image_texts = []
         try:
@@ -167,14 +190,35 @@ class PdfParser(BaseParser):
                     if image.width < 100 or image.height < 50:
                         continue
 
-                    # OCR the image
-                    ocr_text = pytesseract.image_to_string(image, lang=ocr_lang).strip()
+                    # Optimization: upscale low-resolution images
+                    # Tesseract works best at 300+ DPI
+                    scale_factor = max(1, 300 / max(image.width, image.height) if max(image.width, image.height) < 300 else 1)
+                    if scale_factor > 1:
+                        new_width = int(image.width * scale_factor)
+                        new_height = int(image.height * scale_factor)
+                        image = image.resize((new_width, new_height), Image.LANCZOS)
+                        logger.debug(f"Upscaled image {img_idx + 1} on page {page_num + 1} by {scale_factor:.1f}x")
+
+                    # Set explicit DPI to avoid Tesseract "Invalid resolution 0 dpi" warnings
+                    image.info["dpi"] = (300, 300)
+
+                    # Convert to grayscale for better OCR
+                    if image.mode != "L":
+                        image = image.convert("L")
+
+                    # Apply mild sharpening
+                    image = image.filter(ImageFilter.SHARPEN)
+
+                    # OCR with PSM auto for better layout detection
+                    custom_config = "--psm 6"  # Assume uniform block of text
+                    ocr_text = pytesseract.image_to_string(image, lang=ocr_lang, config=custom_config).strip()
 
                     if ocr_text and len(ocr_text) > 10:
                         image_texts.append(f"[Image {img_idx + 1} on page {page_num + 1}]\n{ocr_text}")
                         logger.info(f"OCR extracted {len(ocr_text)} chars from image {img_idx + 1} on page {page_num + 1}")
                 except Exception as e:
-                    logger.warning(f"OCR failed for image {img_idx + 1} on page {page_num + 1}: {e}")
+                    # Log at debug level to avoid noise from non-text images
+                    logger.debug(f"OCR skipped for image {img_idx + 1} on page {page_num + 1}: {e}")
 
         except Exception as e:
             logger.warning(f"Image extraction failed for page {page_num + 1}: {e}")
